@@ -1,0 +1,148 @@
+/* InstrumentRow.css - Styles for the InstrumentRow component */
+
+.instrument-row {
+    display: flex;
+    width: 100%;
+    height: 50px;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.instrument-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    width: 100px;
+    height: 25px;
+    /* Exactly half the height of instrument-row */
+    padding: 0 8px;
+    font-weight: 500;
+    background-color: transparent;
+    z-index: 10;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+
+.instrument-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    text-align: center;
+    width: 100%;
+}
+
+.instrument-name-input {
+    width: 100%;
+    border: none;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    outline: none;
+}
+
+.instrument-row-content {
+    position: relative;
+    flex-grow: 1;
+    height: 50px;
+    width: 100%;
+    margin-left: 100px;
+    /* Exactly the width of instrument-label */
+}
+
+.instrument-row-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+}
+
+.activity-bar {
+    position: absolute;
+    height: 20px;
+    top: 25px;
+    /* Position in bottom half of row */
+    transform: translateY(-10px);
+    /* Center in bottom half */
+    z-index: 5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.activity-handle {
+    position: absolute;
+    width: 4px;
+    top: 0;
+    bottom: 0;
+    cursor: col-resize;
+    background-color: rgba(0, 0, 0, 0.3);
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    z-index: 2;
+}
+
+.activity-handle:hover {
+    opacity: 1;
+}
+
+.left-handle {
+    left: 0;
+}
+
+.right-handle {
+    right: 0;
+}
+
+.activity-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    padding: 0 12px;
+    cursor: move;
+}
+
+.activity-info {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.delete-activity-button {
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-left: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.delete-activity-button:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Styles for when dragging activities */
+.activity-bar.dragging {
+    opacity: 0.7;
+}

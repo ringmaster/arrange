@@ -1,0 +1,110 @@
+/* Header.css - Styles for the Header component */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+}
+
+.arrangement-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.arrangement-title:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.title-input {
+    font-size: 1.5rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    outline: none;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.header-button {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    color: var(--text-color);
+}
+
+.export-button {
+    background-color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    color: white;
+}
+
+.export-button:hover {
+    background-color: #1d4ed8;
+    /* Darker shade of primary */
+}
+
+.import-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .arrangement-title {
+        font-size: 1.25rem;
+    }
+
+    .title-input {
+        font-size: 1.25rem;
+        width: 100%;
+    }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .arrangement-title:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .import-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+}

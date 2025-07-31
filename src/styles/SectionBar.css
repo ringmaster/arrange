@@ -1,0 +1,165 @@
+/* SectionBar.css - Styles for the SectionBar component */
+
+.section-bar {
+    position: relative;
+    width: 100%;
+    padding: 1.5rem 2rem 0.5rem;
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.section-timeline {
+    position: relative;
+    height: 60px;
+    width: 100%;
+    cursor: pointer;
+}
+
+.bar-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--grid-line-color);
+    z-index: 1;
+}
+
+.major-bar {
+    background-color: var(--grid-line-major);
+    width: 2px;
+}
+
+.bar-number {
+    position: absolute;
+    bottom: -20px;
+    left: -10px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.section-container {
+    position: absolute;
+    height: 40px;
+    top: 10px;
+    border-radius: 4px;
+    background-color: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.section-handle {
+    position: absolute;
+    width: 8px;
+    top: 0;
+    bottom: 0;
+    cursor: col-resize;
+    background-color: rgba(37, 99, 235, 0.5);
+    transition: background-color 0.2s;
+}
+
+.section-handle:hover {
+    background-color: rgba(37, 99, 235, 0.8);
+}
+
+.left-handle {
+    left: 0;
+}
+
+.right-handle {
+    right: 0;
+}
+
+.section-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 12px;
+    overflow: hidden;
+}
+
+.section-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.section-name:hover {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+.section-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 500;
+    font-size: 0.9rem;
+    outline: none;
+    width: 100%;
+    padding: 2px 4px;
+}
+
+.delete-section-button {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-left: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.delete-section-button:hover {
+    opacity: 1;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.section-instructions {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 1.5rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .section-bar {
+        padding: 1rem 1rem 0.5rem;
+    }
+
+    .section-container {
+        height: 30px;
+    }
+
+    .section-name {
+        font-size: 0.8rem;
+    }
+
+    .section-instructions {
+        display: none;
+    }
+}
