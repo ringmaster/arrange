@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Instrument } from '../types';
 import { getContrastTextColor } from '../utils/colorUtils';
 import '../styles/InstrumentRow.css';
@@ -97,11 +97,14 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     const activity = instrument.activities.find(a => a.id === activityId);
     if (!activity) return;
 
+    // Capture initial values
+    const initialBar = positionToBar(e.clientX);
+
     setIsDragging(true);
     setDragInfo({
       activityId,
       edge,
-      initialBar: positionToBar(e.clientX),
+      initialBar,
       initialStart: activity.startBar,
       initialEnd: activity.endBar
     });
@@ -161,6 +164,77 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     setDragInfo(null);
   };
 
+  // Global mouse handlers for dragging outside the row
+  useEffect(() => {
+    if (!isDragging || !dragInfo) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!rowRef.current) return;
+
+      // Calculate bar position relative to the row, constraining within its bounds
+      const rect = rowRef.current.getBoundingClientRect();
+      const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const percent = relativeX / rect.width;
+      const currentBar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
+
+      const barDiff = currentBar - dragInfo.initialBar;
+      const activity = instrument.activities.find(a => a.id === dragInfo.activityId);
+      if (!activity) return;
+
+      if (dragInfo.edge === 'start') {
+        // Dragging start edge - don't allow to go beyond end
+        const newStartBar = Math.min(
+          Math.max(1, dragInfo.initialStart + barDiff),
+          activity.endBar
+        );
+        onUpdateActivity(activity.id, newStartBar, activity.endBar);
+      } else if (dragInfo.edge === 'end') {
+        // Dragging end edge - don't allow to go below start
+        const newEndBar = Math.max(
+          Math.min(totalBars, dragInfo.initialEnd + barDiff),
+          activity.startBar
+        );
+        onUpdateActivity(activity.id, activity.startBar, newEndBar);
+      } else if (dragInfo.edge === 'move') {
+        // Moving entire activity
+        const activityLength = dragInfo.initialEnd - dragInfo.initialStart;
+        let newStartBar = Math.max(1, dragInfo.initialStart + barDiff);
+        let newEndBar = newStartBar + activityLength;
+
+        // Constrain to grid bounds
+        if (newEndBar > totalBars) {
+          newEndBar = totalBars;
+          newStartBar = Math.max(1, newEndBar - activityLength);
+        }
+
+        // Check for conflicts with other activities
+        const hasConflict = instrument.activities.some(a => {
+          if (a.id === activity.id) return false; // Skip self
+          return (newStartBar <= a.endBar && newEndBar >= a.startBar);
+        });
+
+        if (!hasConflict) {
+          onUpdateActivity(activity.id, newStartBar, newEndBar);
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+      setDragInfo(null);
+    };
+
+    // Add global event listeners
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    // Clean up event listeners
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, dragInfo, totalBars, instrument.activities, onUpdateActivity]);
+
   // Handle clicking on empty row space to add new activity
   const handleRowClick = (e: React.MouseEvent) => {
     // Only handle direct clicks on the row background (not on activities)
@@ -193,7 +267,6 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       ref={rowRef}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       {/* Instrument name/label - occupies top half of the row */}
       <div className="instrument-label" style={{ color: textColor, borderLeft: `3px solid ${instrument.color}` }}>

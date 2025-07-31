@@ -37,13 +37,23 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
 
     return sortedSections.map((section, index) => {
       const isEven = index % 2 === 0;
-      const startPercent = barToPercent(section.startBar);
-      const endPercent = barToPercent(section.endBar);
-      const width = endPercent - startPercent;
+
+      // Calculate the bar width as a percentage
+      const barWidth = 100 / totalBars;
+
+      // Calculate start with a small gap (1/5 of a bar width)
+      const startBar = section.startBar;
+      const startPercent = ((startBar - 1) / totalBars) * 100;
+      const gapSize = barWidth / 5;
+      const adjustedStartPercent = startPercent + gapSize;
+
+      // Calculate end to be exactly at the end of the last bar
+      const endBar = section.endBar;
+      const endPercent = ((endBar) / totalBars) * 100;
 
       return {
-        left: `${startPercent}%`,
-        width: `${width}%`,
+        left: `${adjustedStartPercent}%`,
+        width: `${endPercent - adjustedStartPercent}%`,
         backgroundColor: isEven ? 'rgba(200, 200, 200, 0.2)' : 'rgba(240, 240, 240, 0.2)'
       };
     });

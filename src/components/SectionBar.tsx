@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Section } from '../types';
 import '../styles/SectionBar.css';
 
@@ -39,7 +39,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
     const rect = sectionBarRef.current.getBoundingClientRect();
     const relativeX = clientX - rect.left;
     const percent = relativeX / rect.width;
-    const bar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars) + 1));
+    const bar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
 
     return bar;
   };
@@ -101,6 +101,49 @@ const SectionBar: React.FC<SectionBarProps> = ({
     setDraggingSection(null);
     setIsDragging(false);
   };
+
+  // Global mouse handlers for dragging outside the section bar
+  useEffect(() => {
+    if (!isDragging || !draggingSection) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!sectionBarRef.current) return;
+
+      const section = sections.find(s => s.id === draggingSection.id);
+      if (!section) return;
+
+      // Calculate bar position relative to the section bar, constraining within its bounds
+      const rect = sectionBarRef.current.getBoundingClientRect();
+      const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const percent = relativeX / rect.width;
+      const newBar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
+
+      if (draggingSection.edge === 'start') {
+        // Don't allow start to go beyond end bar
+        const validBar = Math.min(newBar, section.endBar);
+        onUpdateSection(draggingSection.id, { startBar: validBar });
+      } else if (draggingSection.edge === 'end') {
+        // Don't allow end to go below start bar
+        const validBar = Math.max(newBar, section.startBar);
+        onUpdateSection(draggingSection.id, { endBar: validBar });
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      setDraggingSection(null);
+      setIsDragging(false);
+    };
+
+    // Add global event listeners
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    // Clean up event listeners
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, draggingSection, sections, totalBars, onUpdateSection]);
 
   const handleBarClick = (e: React.MouseEvent) => {
     // Only handle clicks directly on the timeline (not on sections)
@@ -172,7 +215,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
       onClick={handleBarClick}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+
     >
       <div className="section-timeline">
         {/* Bar number indicators */}
