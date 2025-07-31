@@ -21,8 +21,10 @@ const SectionBar: React.FC<SectionBarProps> = ({
   const [tempSectionName, setTempSectionName] = useState('');
   const [draggingSection, setDraggingSection] = useState<{
     id: string;
-    edge: 'start' | 'end' | null;
+    edge: 'start' | 'end' | 'move' | null;
     initialBar: number;
+    initialStart?: number;
+    initialEnd?: number;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const sectionBarRef = useRef<HTMLDivElement>(null);
@@ -64,14 +66,16 @@ const SectionBar: React.FC<SectionBarProps> = ({
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent, sectionId: string, edge: 'start' | 'end' | null) => {
+  const handleMouseDown = (e: React.MouseEvent, sectionId: string, edge: 'start' | 'end' | 'move' | null) => {
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
 
     setDraggingSection({
       id: sectionId,
       edge,
-      initialBar: edge === 'start' ? section.startBar : edge === 'end' ? section.endBar : 0
+      initialBar: positionToBar(e.clientX),
+      initialStart: section.startBar,
+      initialEnd: section.endBar
     });
     setIsDragging(true);
     e.preventDefault();
@@ -85,6 +89,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
 
     // Ensure we snap exactly to grid lines
     const newBar = Math.round(positionToBar(e.clientX));
+    const barDiff = newBar - draggingSection.initialBar;
 
     if (draggingSection.edge === 'start') {
       // Don't allow start to go beyond end bar
@@ -94,6 +99,30 @@ const SectionBar: React.FC<SectionBarProps> = ({
       // Don't allow end to go below start bar
       const validBar = Math.max(newBar, section.startBar);
       onUpdateSection(draggingSection.id, { endBar: validBar });
+    } else if (draggingSection.edge === 'move' && draggingSection.initialStart !== undefined && draggingSection.initialEnd !== undefined) {
+      // Move the entire section
+      const sectionLength = draggingSection.initialEnd - draggingSection.initialStart;
+      let newStartBar = Math.max(1, draggingSection.initialStart + barDiff);
+      let newEndBar = newStartBar + sectionLength;
+
+      // Constrain to grid bounds
+      if (newEndBar > totalBars) {
+        newEndBar = totalBars;
+        newStartBar = Math.max(1, newEndBar - sectionLength);
+      }
+
+      // Check for conflicts with other sections
+      const hasConflict = sections.some(s => {
+        if (s.id === section.id) return false; // Skip self
+        return (newStartBar <= s.endBar && newEndBar >= s.startBar);
+      });
+
+      if (!hasConflict) {
+        onUpdateSection(draggingSection.id, {
+          startBar: newStartBar,
+          endBar: newEndBar
+        });
+      }
     }
   };
 
@@ -117,6 +146,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
       const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
       const percent = relativeX / rect.width;
       const newBar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
+      const barDiff = newBar - draggingSection.initialBar;
 
       if (draggingSection.edge === 'start') {
         // Don't allow start to go beyond end bar
@@ -126,6 +156,30 @@ const SectionBar: React.FC<SectionBarProps> = ({
         // Don't allow end to go below start bar
         const validBar = Math.max(newBar, section.startBar);
         onUpdateSection(draggingSection.id, { endBar: validBar });
+      } else if (draggingSection.edge === 'move' && draggingSection.initialStart !== undefined && draggingSection.initialEnd !== undefined) {
+        // Move the entire section
+        const sectionLength = draggingSection.initialEnd - draggingSection.initialStart;
+        let newStartBar = Math.max(1, draggingSection.initialStart + barDiff);
+        let newEndBar = newStartBar + sectionLength;
+
+        // Constrain to grid bounds
+        if (newEndBar > totalBars) {
+          newEndBar = totalBars;
+          newStartBar = Math.max(1, newEndBar - sectionLength);
+        }
+
+        // Check for conflicts with other sections
+        const hasConflict = sections.some(s => {
+          if (s.id === section.id) return false; // Skip self
+          return (newStartBar <= s.endBar && newEndBar >= s.startBar);
+        });
+
+        if (!hasConflict) {
+          onUpdateSection(draggingSection.id, {
+            startBar: newStartBar,
+            endBar: newEndBar
+          });
+        }
       }
     };
 
@@ -247,7 +301,10 @@ const SectionBar: React.FC<SectionBarProps> = ({
               onMouseDown={(e) => handleMouseDown(e, section.id, 'start')}
             ></div>
 
-            <div className="section-content">
+            <div
+              className="section-content"
+              onMouseDown={(e) => handleMouseDown(e, section.id, 'move')}
+            >
               {editingSectionId === section.id ? (
                 <input
                   type="text"
@@ -257,18 +314,25 @@ const SectionBar: React.FC<SectionBarProps> = ({
                   onKeyDown={handleKeyDown}
                   autoFocus
                   className="section-name-input"
+                  onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <div
                   className="section-name"
-                  onClick={() => handleSectionNameClick(section)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSectionNameClick(section);
+                  }}
                 >
                   {section.name}
                 </div>
               )}
               <button
                 className="delete-section-button"
-                onClick={() => handleDeleteSection(section.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteSection(section.id);
+                }}
                 title="Delete section"
               >
                 ×
@@ -283,7 +347,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
         ))}
       </div>
       <div className="section-instructions">
-        Click on empty timeline to add a new section • Click section name to edit • Drag edges to resize
+        Click on empty timeline to add a new section • Click section name to edit • Drag edges to resize • Drag middle to move
       </div>
     </div>
   );
