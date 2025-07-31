@@ -2,6 +2,8 @@
 
 .instrument-row {
     display: flex;
+    flex-direction: column;
+    /* Stack label above content */
     width: 100%;
     height: 50px;
     position: relative;
@@ -45,12 +47,13 @@
 }
 
 .instrument-row-content {
-    position: relative;
-    flex-grow: 1;
-    height: 50px;
-    width: 100%;
-    margin-left: 100px;
-    /* Exactly the width of instrument-label */
+    position: absolute;
+    top: 25px;
+    /* Positioned exactly at half the row height */
+    left: 0;
+    right: 0;
+    height: 25px;
+    /* Exactly half the height of instrument-row */
 }
 
 .instrument-row-background {
@@ -65,10 +68,9 @@
 .activity-bar {
     position: absolute;
     height: 20px;
-    top: 25px;
-    /* Position in bottom half of row */
-    transform: translateY(-10px);
-    /* Center in bottom half */
+    /* Slightly smaller than row-content height for visual margin */
+    top: 2px;
+    /* Small margin from top of content area */
     z-index: 5;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     display: flex;
@@ -77,6 +79,7 @@
     overflow: hidden;
     box-sizing: border-box;
     border: 1px solid rgba(0, 0, 0, 0.1);
+    /* No margin-left - activity bars should align with grid */
 }
 
 .activity-handle {
