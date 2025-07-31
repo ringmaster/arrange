@@ -279,7 +279,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
             onKeyDown={handleKeyDown}
             autoFocus
             className="instrument-name-input"
-            style={{ color: textColor }}
+            style={{ color: 'var(--primary-color)', background: 'transparent' }}
           />
         ) : (
           <div className="instrument-name" onClick={handleNameClick} title="Click to edit instrument name">

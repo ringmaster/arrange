@@ -44,6 +44,10 @@
     font-size: 0.9rem;
     font-weight: 500;
     outline: none;
+    background-color: transparent;
+    border-bottom: 1px solid var(--primary-color);
+    padding: 2px 4px;
+    border-radius: 2px;
 }
 
 .instrument-row-content {
