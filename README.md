@@ -2,6 +2,9 @@
 
 A modern Single Page Application (SPA) for visualizing and editing music track arrangements by breaking down instrument activity across bars and song sections. Built with React and TypeScript.
 
+📱 **[Try it now on GitHub Pages!](https://yourusername.github.io/score)**
+
+
 ## Features
 
 ### 📊 Grid Interface
@@ -21,6 +24,7 @@ A modern Single Page Application (SPA) for visualizing and editing music track a
 - Colored horizontal bars spanning bar columns
 - Visual representation of how long each instrument plays
 - Multiple non-overlapping activity bars per instrument row
+- Vertical scroll to cycle through color variations for each activity
 - Drag interactions:
   - Drag right edge to resize duration
   - Drag entire bar to reposition within row
@@ -173,6 +177,18 @@ interface ArrangementData {
 - Data is stored in the browser's localStorage (not cloud-synced)
 - Complex arrangements with many instruments may impact performance on older devices
 - No audio playback or synchronization with actual music files
+
+## Deployment
+
+### GitHub Pages
+This project is configured to automatically deploy to GitHub Pages using GitHub Actions.
+
+- Each push to the main branch triggers a build and deploy workflow
+- The deployed version is available at: https://yourusername.github.io/score
+- For detailed setup instructions, see [GitHub Pages Setup](docs/GITHUB_PAGES_SETUP.md)
+
+### Local Development
+For instructions on setting up the project locally, see [Local Development Guide](docs/LOCAL_DEVELOPMENT.md)
 
 ## Future Enhancements
 

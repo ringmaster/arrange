@@ -1,0 +1,61 @@
+name: Deploy to GitHub Pages
+
+# Controls when the workflow will run
+on:
+  push:
+    branches:
+      - main # Set this to your default branch (could be master instead)
+
+  # Allow manually triggering the workflow from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18" # Use the Node.js version that matches your development environment
+          cache: "npm" # Cache npm dependencies for faster installation
+
+      - name: Install dependencies
+        run: npm ci # Clean install of dependencies
+        working-directory: ./score
+
+      - name: Build
+        run: npm run build
+        working-directory: ./score
+
+      # Configure GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      # Upload artifact - this packages the build output for deployment
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ./score/dist # Directory containing the built application
+
+      # Deploy to GitHub Pages - this publishes the artifact to your GitHub Pages site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
