@@ -47,15 +47,15 @@ jobs:
 
       # Configure GitHub Pages
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v3
 
       # Upload artifact - this packages the build output for deployment
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./score/dist # Directory containing the built application
 
       # Deploy to GitHub Pages - this publishes the artifact to your GitHub Pages site
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v3
