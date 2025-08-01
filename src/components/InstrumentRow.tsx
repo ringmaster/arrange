@@ -432,6 +432,11 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
             autoFocus
             className="instrument-name-input"
             style={{ color: 'var(--primary-color)', background: 'transparent' }}
+            ref={(input) => {
+              if (input) {
+                input.select();
+              }
+            }}
           />
         ) : (
           <div className="instrument-name" onClick={handleNameClick} title="Click to edit instrument name">

@@ -375,6 +375,11 @@ const SectionBar: React.FC<SectionBarProps> = ({
                   autoFocus
                   className="section-name-input"
                   onClick={(e) => e.stopPropagation()}
+                  ref={(input) => {
+                    if (input) {
+                      input.select();
+                    }
+                  }}
                 />
               ) : (
                 <div
