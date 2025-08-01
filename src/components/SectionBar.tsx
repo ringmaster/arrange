@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Section } from '../types';
 import '../styles/SectionBar.css';
 
@@ -38,10 +38,8 @@ const SectionBar: React.FC<SectionBarProps> = ({
     return ((bar - 1) / totalBars) * 100;
   };
 
-  // Helper function to ensure exact bar positioning
-  const getExactBarPosition = (bar: number, totalBars: number): number => {
-    return ((bar - 1) / totalBars) * 100;
-  };
+  // Helper function to ensure exact bar positioning is defined in barToPercent
+  // and reused throughout the JSX templates below
 
   // Function to calculate the exact width of a section bar
   const getExactBarWidth = (startBar: number, endBar: number, totalBars: number): number => {

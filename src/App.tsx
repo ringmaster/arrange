@@ -96,8 +96,7 @@ const App: React.FC = () => {
   ) => {
     setArrangementData(prev => {
       // Only expand bars, never shrink them when just changing a variation
-      let shouldCheckBars = variation === undefined;
-
+      // We only check bars when variation is undefined
       return {
         ...prev,
         instruments: prev.instruments.map(inst =>

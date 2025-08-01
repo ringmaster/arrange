@@ -32,8 +32,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
   onUpdateName,
   onAddActivity,
   onUpdateActivity,
-  onDeleteActivity,
-  barToPercent
+  onDeleteActivity
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(instrument.name);
@@ -52,14 +51,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
 
   const rowRef = useRef<HTMLDivElement>(null);
 
-  // Calculate text color based on background color for contrast
-  const textColor = getContrastTextColor(instrument.color);
-
   // Convert mouse position to bar number - consistently calculate bar position
-  const positionToBar = (clientX: number) => {
-    return getBarPositionFromMousePos(clientX);
-  };
-
   // Helper function to get bar position from mouse position
   const getBarPositionFromMousePos = (mousePos: number) => {
     if (!rowRef.current) return 1;
@@ -279,7 +271,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [isDragging, dragInfo, totalBars, instrument.activities, onUpdateActivity]);
+  }, [isDragging, dragInfo, totalBars, instrument.activities, onUpdateActivity, getBarPositionFromMousePos]);
 
   // Find section at a given bar position
   const findSectionAtBar = (bar: number) => {
@@ -525,6 +517,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       </div>
     </div>
   );
+
 };
 
 export default InstrumentRow;

@@ -35,11 +35,8 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
   const getSectionBackgrounds = () => {
     const sortedSections = [...sections].sort((a, b) => a.startBar - b.startBar);
 
-    return sortedSections.map((section, index) => {
-      const isEven = index % 2 === 0;
-
-      // Calculate the bar width as a percentage
-      const barWidth = 100 / totalBars;
+    return sortedSections.map((section) => {
+      // The section background styles are calculated below
 
       // Calculate start to be exactly at the start of the section
       const startBar = section.startBar;
@@ -97,8 +94,8 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
               className="section-background"
               style={totalBars > 64
                 ? {
-                  left: `calc(${((style.left as string).replace('%', '') as any) / 100 * totalBars * 20}px)`,
-                  width: `calc(${((style.width as string).replace('%', '') as any) / 100 * totalBars * 20}px)`,
+                  left: `calc(${parseFloat((style.left as string).replace('%', '')) / 100 * totalBars * 20}px)`,
+                  width: `calc(${parseFloat((style.width as string).replace('%', '')) / 100 * totalBars * 20}px)`,
                   backgroundColor: style.backgroundColor,
                   borderLeft: style.borderLeft,
                   borderRight: style.borderRight
@@ -132,12 +129,12 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
               instrument={instrument}
               totalBars={totalBars}
               sections={sections}
-              onUpdateName={(name) => onUpdateInstrumentName(instrument.id, name)}
-              onAddActivity={(startBar, endBar) => onAddActivity(instrument.id, startBar, endBar)}
-              onUpdateActivity={(activityId, startBar, endBar, variation) =>
+              onUpdateName={(name: string) => onUpdateInstrumentName(instrument.id, name)}
+              onAddActivity={(startBar: number, endBar: number) => onAddActivity(instrument.id, startBar, endBar)}
+              onUpdateActivity={(activityId: string, startBar: number, endBar: number, variation?: number) =>
                 onUpdateActivity(instrument.id, activityId, startBar, endBar, variation)
               }
-              onDeleteActivity={(activityId) => onDeleteActivity(instrument.id, activityId)}
+              onDeleteActivity={(activityId: string) => onDeleteActivity(instrument.id, activityId)}
               barToPercent={barToPercent}
             />
           ))}
