@@ -31,6 +31,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
   const [creationStartBar, setCreationStartBar] = useState<number | null>(null);
   const [currentMousePos, setCurrentMousePos] = useState<number>(0);
   const sectionBarRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   // Function to convert bar number to position percentage with exact alignment
   const barToPercent = (bar: number) => {
@@ -50,21 +51,19 @@ const SectionBar: React.FC<SectionBarProps> = ({
 
   // Function to convert mouse position to bar number
   const positionToBar = (clientX: number) => {
-    if (!sectionBarRef.current) return 1;
+    if (!timelineRef.current) return 1;
 
-    const rect = sectionBarRef.current.getBoundingClientRect();
-    const relativeX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const rect = timelineRef.current.getBoundingClientRect();
+    const containerWidth = rect.width;
 
-    if (totalBars > 64) {
-      // For large arrangements, use fixed width per bar (20px)
-      const bar = Math.max(1, Math.min(totalBars, Math.floor(relativeX / 20) + 1));
-      return bar;
-    } else {
-      // For smaller arrangements, use percentage
-      const percent = relativeX / rect.width;
-      const bar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
-      return bar;
-    }
+    // Get position relative to the container
+    const relativeX = clientX - rect.left;
+
+    // Direct calculation method - simpler and more reliable
+    const barPosition = Math.ceil(relativeX / (containerWidth / totalBars));
+    const validBar = Math.max(1, Math.min(totalBars, barPosition));
+
+    return validBar;
   };
 
   const handleSectionNameClick = (section: Section) => {
@@ -301,13 +300,14 @@ const SectionBar: React.FC<SectionBarProps> = ({
         className="section-timeline"
         onClick={handleTimelineClick}
         onMouseDown={handleTimelineMouseDown}
+        ref={timelineRef}
       >
         {/* Preview of section being created */}
         {isCreatingSection && creationStartBar !== null && (
           <div
             className="section-container section-preview"
             style={{
-              left: `${getExactBarPosition(Math.min(creationStartBar, positionToBar(currentMousePos)), totalBars)}%`,
+              left: `${barToPercent(Math.min(creationStartBar, positionToBar(currentMousePos)))}%`,
               width: `${getExactBarWidth(
                 Math.min(creationStartBar, positionToBar(currentMousePos)),
                 Math.max(creationStartBar, positionToBar(currentMousePos)),
@@ -352,7 +352,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
               }
               : {
                 left: `${barToPercent(section.startBar)}%`,
-                width: `${barToPercent(section.endBar + 1) - barToPercent(section.startBar)}%`,
+                width: `${getExactBarWidth(section.startBar, section.endBar, totalBars)}%`,
                 boxSizing: 'border-box',
                 zIndex: 5
               }
