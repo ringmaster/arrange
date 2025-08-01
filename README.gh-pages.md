@@ -1,6 +1,6 @@
 # Music Arrangement Analyzer - GitHub Pages Deployment
 
-This branch contains the built version of the Music Arrangement Analyzer web application, designed to be served through GitHub Pages. This is an automated deployment built from the source code in the main branch.
+This branch contains the built version of the Music Arrangement Analyzer web application, designed to be served through GitHub Pages. This is an automated deployment built from the source code in the main branch of the [arrange](https://github.com/ringmaster/arrange) repository.
 
 ## About the Application
 
@@ -17,14 +17,15 @@ Music Arrangement Analyzer is a visual tool for breaking down instrument activit
 
 ## Development
 
-The source code for this application is in the `main` branch of https://github.com/ringmaster/arrange. This `gh-pages` branch is automatically updated by GitHub Actions whenever changes are pushed to the main branch.
+The source code for this application is in the `main` branch of the [arrange repository](https://github.com/ringmaster/arrange). The `gh-pages` branch is automatically updated by GitHub Actions whenever changes are pushed to the main branch.
 
 To contribute to this project:
 
-1. Clone the repository
-2. Switch to the `main` branch
-3. Make your changes
-4. Submit a pull request
+1. Clone the repository: `git clone https://github.com/ringmaster/arrange.git`
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+4. Make your changes
+5. Submit a pull request
 
 ## License
 
