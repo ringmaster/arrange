@@ -113,6 +113,8 @@
     cursor: pointer;
     transition: background-color 0.2s;
     min-height: 60px;
+    position: relative;
+    z-index: 10;
 }
 
 .add-instrument-area:hover {

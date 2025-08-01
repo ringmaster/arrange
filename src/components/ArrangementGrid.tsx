@@ -41,20 +41,20 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
       // Calculate the bar width as a percentage
       const barWidth = 100 / totalBars;
 
-      // Calculate start with a small gap (1/5 of a bar width)
+      // Calculate start to be exactly at the start of the section
       const startBar = section.startBar;
       const startPercent = ((startBar - 1) / totalBars) * 100;
-      const gapSize = barWidth / 5;
-      const adjustedStartPercent = startPercent + gapSize;
 
       // Calculate end to be exactly at the end of the last bar
       const endBar = section.endBar;
       const endPercent = ((endBar) / totalBars) * 100;
 
       return {
-        left: `${adjustedStartPercent}%`,
-        width: `${endPercent - adjustedStartPercent}%`,
-        backgroundColor: isEven ? 'rgba(200, 200, 200, 0.2)' : 'rgba(240, 240, 240, 0.2)'
+        left: `${startPercent}%`,
+        width: `${endPercent - startPercent}%`,
+        backgroundColor: 'hsl(222, 47%, 11%)',
+        borderLeft: '5px solid #4a5568',
+        borderRight: '5px solid #4a5568'
       };
     });
   };
@@ -101,7 +101,9 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
                 ? {
                   left: `calc(${((style.left as string).replace('%', '') as any) / 100 * totalBars * 20}px)`,
                   width: `calc(${((style.width as string).replace('%', '') as any) / 100 * totalBars * 20}px)`,
-                  backgroundColor: style.backgroundColor
+                  backgroundColor: style.backgroundColor,
+                  borderLeft: style.borderLeft,
+                  borderRight: style.borderRight
                 }
                 : style
               }
