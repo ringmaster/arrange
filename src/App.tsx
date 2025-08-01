@@ -91,26 +91,34 @@ const App: React.FC = () => {
     instrumentId: string,
     activityId: string,
     startBar: number,
-    endBar: number
+    endBar: number,
+    variation?: number
   ) => {
-    setArrangementData(prev => ({
-      ...prev,
-      instruments: prev.instruments.map(inst =>
-        inst.id === instrumentId
-          ? {
-            ...inst,
-            activities: inst.activities.map(activity =>
-              activity.id === activityId
-                ? { ...activity, startBar, endBar }
-                : activity
-            )
-          }
-          : inst
-      ),
-    }));
+    setArrangementData(prev => {
+      // Only expand bars, never shrink them when just changing a variation
+      let shouldCheckBars = variation === undefined;
 
-    // Check if we need to expand the total bars
-    calculateRequiredBars();
+      return {
+        ...prev,
+        instruments: prev.instruments.map(inst =>
+          inst.id === instrumentId
+            ? {
+              ...inst,
+              activities: inst.activities.map(activity =>
+                activity.id === activityId
+                  ? { ...activity, startBar, endBar, variation: variation !== undefined ? variation : activity.variation }
+                  : activity
+              )
+            }
+            : inst
+        ),
+      };
+    });
+
+    // Only check if we need to expand bars when actually changing bar positions, not just variations
+    if (variation === undefined) {
+      calculateRequiredBars();
+    }
   }, []);
 
   const deleteActivity = useCallback((instrumentId: string, activityId: string) => {
@@ -191,7 +199,7 @@ const App: React.FC = () => {
     // Always show at least 64 bars, or 4 more than the maximum used
     const requiredBars = Math.max(64, maxUsedBar + 4);
 
-    // Update totalBars if needed
+    // Update totalBars if needed, but only ever increase, never decrease
     if (requiredBars > arrangementData.totalBars) {
       updateTotalBars(requiredBars);
     }

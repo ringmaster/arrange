@@ -3,6 +3,7 @@ export interface Activity {
   id: string;
   startBar: number;
   endBar: number;
+  variation?: number;
 }
 
 export interface Instrument {

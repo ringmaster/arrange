@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Instrument, Section } from '../types';
-import { getContrastTextColor } from '../utils/colorUtils';
+import { getContrastTextColor, getColorVariation } from '../utils/colorUtils';
 import '../styles/InstrumentRow.css';
 
 // Helper function to ensure exact bar positioning
@@ -20,7 +20,7 @@ interface InstrumentRowProps {
   sections: Section[];
   onUpdateName: (name: string) => void;
   onAddActivity: (startBar: number, endBar: number) => void;
-  onUpdateActivity: (activityId: string, startBar: number, endBar: number) => void;
+  onUpdateActivity: (activityId: string, startBar: number, endBar: number, variation?: number) => void;
   onDeleteActivity: (activityId: string) => void;
   barToPercent: (bar: number) => number;
 }
@@ -119,6 +119,45 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     });
   };
 
+  // Handle wheel event on activity bar to cycle through variations
+  const handleActivityWheel = (e: React.WheelEvent, activityId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const activity = instrument.activities.find(a => a.id === activityId);
+    if (!activity) return;
+
+    // Store the last wheel event timestamp to throttle scrolling
+    const now = Date.now();
+    const wheelThrottleDelay = 500; // 500ms delay between variation changes
+
+    // Get or create a data attribute on the element to store the last wheel time
+    const target = e.currentTarget as HTMLElement;
+    const lastWheelTime = parseInt(target.dataset.lastWheelTime || '0', 10);
+
+    // If not enough time has passed since the last wheel event, ignore this one
+    if (now - lastWheelTime < wheelThrottleDelay) {
+      return;
+    }
+
+    // Update the last wheel time
+    target.dataset.lastWheelTime = now.toString();
+
+    // Determine direction: up (negative deltaY) or down (positive deltaY)
+    const direction = e.deltaY < 0 ? -1 : 1;
+
+    // Get current variation or default to 0
+    const currentVariation = activity.variation || 0;
+
+    // Calculate new variation (cycle through 0-4)
+    const MAX_VARIATIONS = 4;
+    let newVariation = (currentVariation + direction) % (MAX_VARIATIONS + 1);
+    if (newVariation < 0) newVariation = MAX_VARIATIONS;
+
+    // Update the activity with the new variation
+    onUpdateActivity(activity.id, activity.startBar, activity.endBar, newVariation);
+  };
+
   // Handle mouse movement during drag
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !dragInfo) return;
@@ -136,14 +175,14 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
         Math.max(1, dragInfo.initialStart + barDiff),
         activity.endBar
       );
-      onUpdateActivity(activity.id, newStartBar, activity.endBar);
+      onUpdateActivity(activity.id, newStartBar, activity.endBar, activity.variation);
     } else if (dragInfo.edge === 'end') {
       // Dragging end edge - don't allow to go below start
       const newEndBar = Math.max(
         Math.min(totalBars, dragInfo.initialEnd + barDiff),
         activity.startBar
       );
-      onUpdateActivity(activity.id, activity.startBar, newEndBar);
+      onUpdateActivity(activity.id, activity.startBar, newEndBar, activity.variation);
     } else if (dragInfo.edge === 'move') {
       // Moving entire activity
       const activityLength = dragInfo.initialEnd - dragInfo.initialStart;
@@ -163,7 +202,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       });
 
       if (!hasConflict) {
-        onUpdateActivity(activity.id, newStartBar, newEndBar);
+        onUpdateActivity(activity.id, newStartBar, newEndBar, activity.variation);
       }
     }
   };
@@ -194,14 +233,14 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
           Math.max(1, dragInfo.initialStart + barDiff),
           activity.endBar
         );
-        onUpdateActivity(activity.id, newStartBar, activity.endBar);
+        onUpdateActivity(activity.id, newStartBar, activity.endBar, activity.variation);
       } else if (dragInfo.edge === 'end') {
         // Dragging end edge - don't allow to go below start
         const newEndBar = Math.max(
           Math.min(totalBars, dragInfo.initialEnd + barDiff),
           activity.startBar
         );
-        onUpdateActivity(activity.id, activity.startBar, newEndBar);
+        onUpdateActivity(activity.id, activity.startBar, newEndBar, activity.variation);
       } else if (dragInfo.edge === 'move') {
         // Moving entire activity
         const activityLength = dragInfo.initialEnd - dragInfo.initialStart;
@@ -221,7 +260,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
         });
 
         if (!hasConflict) {
-          onUpdateActivity(activity.id, newStartBar, newEndBar);
+          onUpdateActivity(activity.id, newStartBar, newEndBar, activity.variation);
         }
       }
     };
@@ -428,6 +467,15 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
           const startPercent = getExactBarPosition(activity.startBar, totalBars);
           const width = getExactBarWidth(activity.startBar, activity.endBar, totalBars);
 
+          // Get color variation based on the activity's variation property
+          const variation = activity.variation || 0;
+          const activityColor = variation === 0
+            ? instrument.color
+            : getColorVariation(instrument.color, variation, 4);
+
+          // Get text color based on the activity color
+          const textColorForVariation = getContrastTextColor(activityColor);
+
           return (
             <div
               key={activity.id}
@@ -435,8 +483,11 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
               style={{
                 left: `${startPercent}%`,
                 width: `${width}%`,
-                backgroundColor: instrument.color
+                backgroundColor: activityColor,
+                cursor: 'move'
               }}
+              onWheel={(e) => handleActivityWheel(e, activity.id)}
+              title={`Scroll to change variations (currently: ${variation > 0 ? 'Variation ' + variation : 'Default'})`}
             >
               <div
                 className="activity-handle left-handle"
@@ -447,8 +498,8 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
                 className="activity-content"
                 onMouseDown={(e) => handleActivityMouseDown(e, activity.id, 'move')}
               >
-                <span className="activity-info" style={{ color: textColor }}>
-                  {activity.startBar}-{activity.endBar}
+                <span className="activity-info" style={{ color: textColorForVariation }}>
+                  {variation > 0 ? `Variation ${variation}` : `•`}
                 </span>
                 <button
                   className="delete-activity-button"

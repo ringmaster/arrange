@@ -10,7 +10,7 @@ interface ArrangementGridProps {
   onAddInstrument: () => void;
   onUpdateInstrumentName: (instrumentId: string, name: string) => void;
   onAddActivity: (instrumentId: string, startBar: number, endBar: number) => void;
-  onUpdateActivity: (instrumentId: string, activityId: string, startBar: number, endBar: number) => void;
+  onUpdateActivity: (instrumentId: string, activityId: string, startBar: number, endBar: number, variation?: number) => void;
   onDeleteActivity: (instrumentId: string, activityId: string) => void;
 }
 
@@ -134,8 +134,8 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
               sections={sections}
               onUpdateName={(name) => onUpdateInstrumentName(instrument.id, name)}
               onAddActivity={(startBar, endBar) => onAddActivity(instrument.id, startBar, endBar)}
-              onUpdateActivity={(activityId, startBar, endBar) =>
-                onUpdateActivity(instrument.id, activityId, startBar, endBar)
+              onUpdateActivity={(activityId, startBar, endBar, variation) =>
+                onUpdateActivity(instrument.id, activityId, startBar, endBar, variation)
               }
               onDeleteActivity={(activityId) => onDeleteActivity(instrument.id, activityId)}
               barToPercent={barToPercent}

@@ -86,6 +86,7 @@
     box-sizing: border-box;
     border: 1px solid rgba(0, 0, 0, 0.1);
     /* No margin-left - activity bars should align with grid */
+    transition: background-color 0.2s ease;
 }
 
 .activity-handle {
@@ -120,6 +121,7 @@
     height: 100%;
     padding: 0 12px;
     cursor: move;
+    user-select: none;
 }
 
 .activity-info {
@@ -127,6 +129,9 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
+    font-weight: 500;
+    width: 100%;
 }
 
 .delete-activity-button {
