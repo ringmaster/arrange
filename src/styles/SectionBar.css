@@ -7,7 +7,8 @@
     background-color: var(--surface-color);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 1rem;
-    overflow: hidden;
+    overflow-y: hidden;
+    overflow-x: auto;
 }
 
 .section-timeline {
@@ -15,6 +16,9 @@
     height: 60px;
     width: 100%;
     cursor: pointer;
+    position: relative;
+    min-width: min-content;
+    z-index: 1;
 }
 
 .bar-indicator {
@@ -23,7 +27,8 @@
     bottom: 0;
     width: 1px;
     background-color: var(--grid-line-color);
-    z-index: 1;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .major-bar {
@@ -50,9 +55,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 2;
     overflow: hidden;
+    cursor: move;
+    z-index: 10;
 }
+
+/* Style for dragging */
+.section-container.dragging {
+    opacity: 0.8;
+    box-shadow: var(--shadow-md);
+}
+
+.section-preview {
+    opacity: 0.6;
+    border-style: dashed;
+    pointer-events: none;
+}
+
 
 .section-handle {
     position: absolute;

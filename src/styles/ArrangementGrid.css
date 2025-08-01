@@ -48,6 +48,7 @@
     border-radius: 4px;
     background-color: var(--surface-color);
     overflow: hidden;
+    min-width: min-content;
 }
 
 .section-backgrounds {
@@ -99,6 +100,7 @@
     flex-direction: column;
     width: 100%;
     border-bottom: 1px solid var(--border-color);
+    min-width: min-content;
 }
 
 .add-instrument-area {
@@ -137,6 +139,18 @@
 @media (max-width: 768px) {
     .arrangement-grid-container {
         padding: 0 1rem;
+    }
+
+    /* For large arrangements (>64 bars), set a min-width to enable scrolling */
+    .arrangement-grid-container {
+        overflow-x: auto;
+    }
+
+    /* Create a fixed width per bar */
+    .arrangement-grid-container[data-bars-count="65"] .grid-content,
+    .arrangement-grid-container[data-bars-count="65"] .timeline-ruler,
+    .arrangement-grid-container[data-bars-count="65"] .instrument-rows {
+        min-width: calc(65 * 20px);
     }
 
     .timeline-ruler {

@@ -65,14 +65,22 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
   };
 
   return (
-    <div className="arrangement-grid-container" ref={gridRef}>
+    <div
+      className="arrangement-grid-container"
+      ref={gridRef}
+      data-bars-count={totalBars > 64 ? "65" : totalBars.toString()}
+    >
       {/* Timeline with bar numbers */}
       <div className="timeline-ruler">
         {Array.from({ length: totalBars }, (_, i) => i + 1).map(barNum => (
           <div
             key={`ruler-${barNum}`}
             className={`ruler-mark ${barNum % 4 === 1 ? 'major-bar' : ''}`}
-            style={{ left: `${barToPercent(barNum)}%` }}
+            style={{
+              left: totalBars > 64
+                ? `calc(${barNum - 1} * 20px)`
+                : `${barToPercent(barNum)}%`
+            }}
           >
             {barNum % 4 === 1 && (
               <span className="bar-number">{barNum}</span>
@@ -89,7 +97,14 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
             <div
               key={`section-bg-${index}`}
               className="section-background"
-              style={style}
+              style={totalBars > 64
+                ? {
+                  left: `calc(${((style.left as string).replace('%', '') as any) / 100 * totalBars * 20}px)`,
+                  width: `calc(${((style.width as string).replace('%', '') as any) / 100 * totalBars * 20}px)`,
+                  backgroundColor: style.backgroundColor
+                }
+                : style
+              }
             />
           ))}
         </div>
@@ -100,7 +115,11 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
             <div
               key={`gridline-${barNum}`}
               className={`grid-line ${barNum % 4 === 1 ? 'major-line' : ''}`}
-              style={{ left: `${barToPercent(barNum)}%` }}
+              style={{
+                left: totalBars > 64
+                  ? `calc(${barNum - 1} * 20px)`
+                  : `${barToPercent(barNum)}%`
+              }}
             />
           ))}
         </div>

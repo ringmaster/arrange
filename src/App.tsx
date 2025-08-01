@@ -13,7 +13,7 @@ const DEFAULT_INSTRUMENTS = ['bass', 'guitar', 'vox', 'keys', 'pads', 'perc', 'd
 const App: React.FC = () => {
   const [arrangementData, setArrangementData] = useState<ArrangementData>({
     name: 'New Arrangement',
-    totalBars: 32,
+    totalBars: 24,
     sections: [],
     instruments: [],
   });
@@ -24,6 +24,8 @@ const App: React.FC = () => {
     if (savedData) {
       try {
         setArrangementData(JSON.parse(savedData));
+        // After loading saved data, calculate if we need to show more bars
+        setTimeout(() => calculateRequiredBars(), 0);
       } catch (e) {
         console.error('Failed to parse saved data', e);
       }
@@ -80,6 +82,9 @@ const App: React.FC = () => {
           : inst
       ),
     }));
+
+    // Check if we need to expand the total bars
+    calculateRequiredBars();
   }, []);
 
   const updateActivity = useCallback((
@@ -103,6 +108,9 @@ const App: React.FC = () => {
           : inst
       ),
     }));
+
+    // Check if we need to expand the total bars
+    calculateRequiredBars();
   }, []);
 
   const deleteActivity = useCallback((instrumentId: string, activityId: string) => {
@@ -127,6 +135,9 @@ const App: React.FC = () => {
         { id: uuidv4(), name, startBar, endBar },
       ].sort((a, b) => a.startBar - b.startBar),
     }));
+
+    // Check if we need to expand the total bars
+    calculateRequiredBars();
   }, []);
 
   const updateSection = useCallback((
@@ -141,6 +152,9 @@ const App: React.FC = () => {
           : section
       ).sort((a, b) => a.startBar - b.startBar),
     }));
+
+    // Check if we need to expand the total bars
+    calculateRequiredBars();
   }, []);
 
   const deleteSection = useCallback((sectionId: string) => {
@@ -158,10 +172,35 @@ const App: React.FC = () => {
     setArrangementData(prev => ({ ...prev, totalBars }));
   }, []);
 
+  // Calculate the required number of bars based on current content
+  const calculateRequiredBars = () => {
+    let maxUsedBar = 0;
+
+    // Check maximum bar used in sections
+    arrangementData.sections.forEach(section => {
+      maxUsedBar = Math.max(maxUsedBar, section.endBar);
+    });
+
+    // Check maximum bar used in activities
+    arrangementData.instruments.forEach(instrument => {
+      instrument.activities.forEach(activity => {
+        maxUsedBar = Math.max(maxUsedBar, activity.endBar);
+      });
+    });
+
+    // Always show at least 24 bars, or 4 more than the maximum used
+    const requiredBars = Math.max(24, maxUsedBar + 4);
+
+    // Update totalBars if needed
+    if (requiredBars > arrangementData.totalBars) {
+      updateTotalBars(requiredBars);
+    }
+  };
+
   const createNewArrangement = useCallback(() => {
     setArrangementData({
       name: 'New Arrangement',
-      totalBars: 32,
+      totalBars: 24,
       sections: [],
       instruments: [],
     });
@@ -193,6 +232,9 @@ const App: React.FC = () => {
       }
 
       setArrangementData(parsedData);
+
+      // After import, calculate if we need to show more bars
+      setTimeout(() => calculateRequiredBars(), 0);
     } catch (e) {
       console.error('Failed to import arrangement data', e);
       alert('The file does not contain valid arrangement data.');
