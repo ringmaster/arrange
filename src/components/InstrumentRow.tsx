@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Instrument } from '../types';
+import type { Instrument, Section } from '../types';
 import { getContrastTextColor } from '../utils/colorUtils';
 import '../styles/InstrumentRow.css';
 
@@ -17,6 +17,7 @@ const getExactBarWidth = (startBar: number, endBar: number, totalBars: number): 
 interface InstrumentRowProps {
   instrument: Instrument;
   totalBars: number;
+  sections: Section[];
   onUpdateName: (name: string) => void;
   onAddActivity: (startBar: number, endBar: number) => void;
   onUpdateActivity: (activityId: string, startBar: number, endBar: number) => void;
@@ -27,6 +28,7 @@ interface InstrumentRowProps {
 const InstrumentRow: React.FC<InstrumentRowProps> = ({
   instrument,
   totalBars,
+  sections,
   onUpdateName,
   onAddActivity,
   onUpdateActivity,
@@ -44,21 +46,28 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     initialEnd: number;
   } | null>(null);
 
+  const [isCreatingActivity, setIsCreatingActivity] = useState(false);
+  const [creationStartBar, setCreationStartBar] = useState<number | null>(null);
+  const [currentMousePos, setCurrentMousePos] = useState<number>(0);
+
   const rowRef = useRef<HTMLDivElement>(null);
 
   // Calculate text color based on background color for contrast
   const textColor = getContrastTextColor(instrument.color);
 
-  // Convert mouse position to bar number
+  // Convert mouse position to bar number - consistently calculate bar position
   const positionToBar = (clientX: number) => {
+    return getBarPositionFromMousePos(clientX);
+  };
+
+  // Helper function to get bar position from mouse position
+  const getBarPositionFromMousePos = (mousePos: number) => {
     if (!rowRef.current) return 1;
 
     const rect = rowRef.current.getBoundingClientRect();
-    const relativeX = clientX - rect.left;
+    const relativeX = mousePos - rect.left;
     const percent = relativeX / rect.width;
-    const bar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
-
-    return bar;
+    return Math.max(1, Math.min(totalBars, Math.floor(percent * totalBars + 1)));
   };
 
   // Handle clicking on the instrument name
@@ -97,8 +106,8 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     const activity = instrument.activities.find(a => a.id === activityId);
     if (!activity) return;
 
-    // Capture initial values
-    const initialBar = positionToBar(e.clientX);
+    // Capture initial values with consistent bar positioning
+    const initialBar = getBarPositionFromMousePos(e.clientX);
 
     setIsDragging(true);
     setDragInfo({
@@ -114,7 +123,8 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !dragInfo) return;
 
-    const currentBar = positionToBar(e.clientX);
+    // Use the same bar positioning logic for consistency
+    const currentBar = getBarPositionFromMousePos(e.clientX);
     const barDiff = currentBar - dragInfo.initialBar;
 
     const activity = instrument.activities.find(a => a.id === dragInfo.activityId);
@@ -172,10 +182,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       if (!rowRef.current) return;
 
       // Calculate bar position relative to the row, constraining within its bounds
-      const rect = rowRef.current.getBoundingClientRect();
-      const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      const percent = relativeX / rect.width;
-      const currentBar = Math.max(1, Math.min(totalBars, Math.round(percent * totalBars)));
+      const currentBar = getBarPositionFromMousePos(e.clientX);
 
       const barDiff = currentBar - dragInfo.initialBar;
       const activity = instrument.activities.find(a => a.id === dragInfo.activityId);
@@ -235,22 +242,121 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     };
   }, [isDragging, dragInfo, totalBars, instrument.activities, onUpdateActivity]);
 
+  // Find section at a given bar position
+  const findSectionAtBar = (bar: number) => {
+    return sections.find(section => bar >= section.startBar && bar <= section.endBar);
+  };
+
+  // Start creating a new activity by dragging
+  const handleRowMouseDown = (e: React.MouseEvent) => {
+    // Only handle direct clicks on the row background (not on activities)
+    if ((e.target as HTMLElement).classList.contains('instrument-row-background')) {
+      // Use consistent bar positioning logic
+      const clickedBar = getBarPositionFromMousePos(e.clientX);
+
+      // Check for conflicts with existing activities
+      const hasConflict = instrument.activities.some(activity => {
+        return (clickedBar >= activity.startBar && clickedBar <= activity.endBar);
+      });
+
+      if (!hasConflict) {
+        setIsCreatingActivity(true);
+        setCreationStartBar(clickedBar);
+        setCurrentMousePos(e.clientX);
+        e.preventDefault(); // Prevent text selection during drag
+      }
+    }
+  };
+
+  // Handle mousemove while creating a new activity
+  const handleCreationMouseMove = (e: React.MouseEvent) => {
+    if (isCreatingActivity && creationStartBar !== null) {
+      // Track current mouse position for preview rendering
+      setCurrentMousePos(e.clientX);
+    }
+  };
+
+  // Handle mouseup to finalize activity creation
+  const handleCreationMouseUp = (e: React.MouseEvent) => {
+    if (isCreatingActivity && creationStartBar !== null) {
+      // Use consistent bar positioning logic
+      const endBar = getBarPositionFromMousePos(e.clientX);
+
+      if (Math.abs(endBar - creationStartBar) < 1) {
+        // If drag distance is very small, treat it as a click
+        const clickedBar = creationStartBar;
+
+        // Find section at clicked position
+        const section = findSectionAtBar(clickedBar);
+
+        let finalStartBar, finalEndBar;
+        if (section) {
+          // Match activity width to full section width
+          finalStartBar = section.startBar;
+          finalEndBar = section.endBar;
+        } else {
+          // Default to a 4-bar activity or less if near the end
+          finalStartBar = clickedBar;
+          finalEndBar = Math.min(totalBars, clickedBar + 3);
+        }
+
+        // Check for conflicts with existing activities
+        const hasConflict = instrument.activities.some(activity => {
+          return (finalStartBar <= activity.endBar && finalEndBar >= activity.startBar);
+        });
+
+        if (!hasConflict) {
+          onAddActivity(finalStartBar, finalEndBar);
+        }
+      } else {
+        // Drag creation - use the dragged range
+        const startBar = Math.min(creationStartBar, endBar);
+        const finalEndBar = Math.max(creationStartBar, endBar);
+
+        // Check for conflicts with existing activities
+        const hasConflict = instrument.activities.some(activity => {
+          return (startBar <= activity.endBar && finalEndBar >= activity.startBar);
+        });
+
+        if (!hasConflict) {
+          onAddActivity(startBar, finalEndBar);
+        }
+      }
+
+      // Reset creation state
+      setIsCreatingActivity(false);
+      setCreationStartBar(null);
+    }
+  };
+
   // Handle clicking on empty row space to add new activity
   const handleRowClick = (e: React.MouseEvent) => {
     // Only handle direct clicks on the row background (not on activities)
     if ((e.target as HTMLElement).classList.contains('instrument-row-background')) {
-      const clickedBar = positionToBar(e.clientX);
+      // Use consistent bar positioning logic
+      const clickedBar = getBarPositionFromMousePos(e.clientX);
 
-      // Default to a 4-bar activity or less if near the end
-      const endBar = Math.min(totalBars, clickedBar + 3);
+      // Find section at clicked position
+      const section = findSectionAtBar(clickedBar);
+
+      let startBar, endBar;
+      if (section) {
+        // Match activity width to full section width
+        startBar = section.startBar;
+        endBar = section.endBar;
+      } else {
+        // Default to a 4-bar activity or less if near the end
+        startBar = clickedBar;
+        endBar = Math.min(totalBars, clickedBar + 3);
+      }
 
       // Check for conflicts with existing activities
       const hasConflict = instrument.activities.some(activity => {
-        return (clickedBar <= activity.endBar && endBar >= activity.startBar);
+        return (startBar <= activity.endBar && endBar >= activity.startBar);
       });
 
       if (!hasConflict) {
-        onAddActivity(clickedBar, endBar);
+        onAddActivity(startBar, endBar);
       }
     }
   };
@@ -265,8 +371,15 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     <div
       className="instrument-row"
       ref={rowRef}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseMove={(e) => {
+        if (isDragging) {
+          handleMouseMove(e);
+        } else if (isCreatingActivity) {
+          handleCreationMouseMove(e);
+        }
+      }}
+      onMouseUp={isDragging ? handleMouseUp : isCreatingActivity ? handleCreationMouseUp : undefined}
+      onMouseDown={!isDragging ? handleRowMouseDown : undefined}
     >
       {/* Instrument name/label - occupies top half of the row */}
       <div className="instrument-label" style={{ borderLeft: `3px solid ${instrument.color}` }}>
@@ -289,8 +402,25 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       </div>
 
       {/* Activity row - occupies bottom half of the row */}
-      <div className="instrument-row-content" onClick={handleRowClick}>
+      <div className="instrument-row-content" onClick={!isCreatingActivity ? handleRowClick : undefined}>
         <div className="instrument-row-background"></div>
+
+        {/* Preview of activity being created */}
+        {isCreatingActivity && creationStartBar !== null && (
+          <div
+            className="activity-bar activity-preview"
+            style={{
+              left: `${getExactBarPosition(Math.min(creationStartBar, getBarPositionFromMousePos(currentMousePos)), totalBars)}%`,
+              width: `${getExactBarWidth(
+                Math.min(creationStartBar, getBarPositionFromMousePos(currentMousePos)),
+                Math.max(creationStartBar, getBarPositionFromMousePos(currentMousePos)),
+                totalBars
+              )}%`,
+              backgroundColor: instrument.color,
+              opacity: 0.5
+            }}
+          />
+        )}
 
         {/* Activity bars */}
         {instrument.activities.map(activity => {

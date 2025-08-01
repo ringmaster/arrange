@@ -112,6 +112,7 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
               key={instrument.id}
               instrument={instrument}
               totalBars={totalBars}
+              sections={sections}
               onUpdateName={(name) => onUpdateInstrumentName(instrument.id, name)}
               onAddActivity={(startBar, endBar) => onAddActivity(instrument.id, startBar, endBar)}
               onUpdateActivity={(activityId, startBar, endBar) =>
