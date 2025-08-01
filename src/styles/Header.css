@@ -59,6 +59,16 @@
     color: var(--text-color);
 }
 
+.new-button {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.new-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
 .export-button {
     background-color: var(--primary-color);
     border: 1px solid var(--primary-color);
@@ -104,7 +114,8 @@
         background-color: rgba(255, 255, 255, 0.1);
     }
 
-    .import-button:hover {
+    .import-button:hover,
+    .new-button:hover {
         background-color: rgba(255, 255, 255, 0.1);
     }
 }

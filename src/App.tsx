@@ -14,42 +14,8 @@ const App: React.FC = () => {
   const [arrangementData, setArrangementData] = useState<ArrangementData>({
     name: 'New Arrangement',
     totalBars: 32,
-    sections: [
-      { id: uuidv4(), name: 'Intro', startBar: 1, endBar: 8 },
-      { id: uuidv4(), name: 'Verse', startBar: 9, endBar: 16 },
-      { id: uuidv4(), name: 'Chorus', startBar: 17, endBar: 24 },
-      { id: uuidv4(), name: 'Outro', startBar: 25, endBar: 32 },
-    ],
-    instruments: [
-      {
-        id: uuidv4(),
-        name: 'Bass',
-        color: generateUniqueColor(),
-        activities: [
-          { id: uuidv4(), startBar: 1, endBar: 8 },
-          { id: uuidv4(), startBar: 17, endBar: 24 },
-        ],
-      },
-      {
-        id: uuidv4(),
-        name: 'Drums',
-        color: generateUniqueColor(),
-        activities: [
-          { id: uuidv4(), startBar: 9, endBar: 16 },
-          { id: uuidv4(), startBar: 17, endBar: 32 },
-        ],
-      },
-      {
-        id: uuidv4(),
-        name: 'Guitar',
-        color: generateUniqueColor(),
-        activities: [
-          { id: uuidv4(), startBar: 5, endBar: 12 },
-          { id: uuidv4(), startBar: 17, endBar: 24 },
-          { id: uuidv4(), startBar: 25, endBar: 32 },
-        ],
-      },
-    ],
+    sections: [],
+    instruments: [],
   });
 
   // Auto-save to localStorage
@@ -192,6 +158,15 @@ const App: React.FC = () => {
     setArrangementData(prev => ({ ...prev, totalBars }));
   }, []);
 
+  const createNewArrangement = useCallback(() => {
+    setArrangementData({
+      name: 'New Arrangement',
+      totalBars: 32,
+      sections: [],
+      instruments: [],
+    });
+  }, []);
+
   const exportArrangement = useCallback(() => {
     const dataStr = JSON.stringify(arrangementData, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
@@ -231,6 +206,7 @@ const App: React.FC = () => {
         onNameChange={updateArrangementName}
         onExport={exportArrangement}
         onImport={importArrangement}
+        onNew={createNewArrangement}
       />
 
       <SectionBar

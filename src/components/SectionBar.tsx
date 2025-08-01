@@ -27,6 +27,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
     initialEnd?: number;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [recentlyFinishedDrag, setRecentlyFinishedDrag] = useState(false);
   const sectionBarRef = useRef<HTMLDivElement>(null);
 
   // Function to convert bar number to position percentage with exact alignment
@@ -129,6 +130,12 @@ const SectionBar: React.FC<SectionBarProps> = ({
   const handleMouseUp = () => {
     setDraggingSection(null);
     setIsDragging(false);
+    setRecentlyFinishedDrag(true);
+
+    // Reset the recently finished drag flag after a short delay
+    setTimeout(() => {
+      setRecentlyFinishedDrag(false);
+    }, 100);
   };
 
   // Global mouse handlers for dragging outside the section bar
@@ -186,6 +193,12 @@ const SectionBar: React.FC<SectionBarProps> = ({
     const handleGlobalMouseUp = () => {
       setDraggingSection(null);
       setIsDragging(false);
+      setRecentlyFinishedDrag(true);
+
+      // Reset the recently finished drag flag after a short delay
+      setTimeout(() => {
+        setRecentlyFinishedDrag(false);
+      }, 100);
     };
 
     // Add global event listeners
@@ -200,66 +213,87 @@ const SectionBar: React.FC<SectionBarProps> = ({
   }, [isDragging, draggingSection, sections, totalBars, onUpdateSection]);
 
   const handleBarClick = (e: React.MouseEvent) => {
-    // Only handle clicks directly on the timeline (not on sections)
-    if ((e.target as HTMLElement).classList.contains('section-timeline')) {
-      // Ensure we snap exactly to grid lines
-      const clickedBar = Math.round(positionToBar(e.clientX));
+    // Skip if we just finished a drag operation or if not clicking directly on the timeline
+    if (recentlyFinishedDrag || !((e.target as HTMLElement).classList.contains('section-timeline'))) {
+      return;
+    }
+    // Ensure we snap exactly to grid lines
+    const clickedBar = Math.round(positionToBar(e.clientX));
 
-      // Find a non-overlapping position for the new section
-      // Start with a default 4-bar section
-      let startBar = clickedBar;
-      let endBar = Math.min(totalBars, startBar + 3);
+    // Find a non-overlapping position for the new section
+    // Start with a default 4-bar section
+    let startBar = clickedBar;
+    let endBar = Math.min(totalBars, startBar + 3);
 
-      // Adjust if there are overlaps
-      const overlappingSections = sections.filter(
-        s => (startBar <= s.endBar && endBar >= s.startBar)
-      );
+    // Adjust if there are overlaps
+    const overlappingSections = sections.filter(
+      s => (startBar <= s.endBar && endBar >= s.startBar)
+    );
 
-      if (overlappingSections.length > 0) {
-        // Find the nearest empty space
-        const sortedSections = [...sections].sort((a, b) => a.startBar - b.startBar);
+    if (overlappingSections.length > 0) {
+      // Find the nearest empty space
+      const sortedSections = [...sections].sort((a, b) => a.startBar - b.startBar);
 
-        // Try to find a gap
-        for (let i = 0; i < sortedSections.length; i++) {
-          const currentSection = sortedSections[i];
-          const nextSection = sortedSections[i + 1];
+      // Try to find a gap
+      for (let i = 0; i < sortedSections.length; i++) {
+        const currentSection = sortedSections[i];
+        const nextSection = sortedSections[i + 1];
 
-          if (!nextSection) {
-            // If this is the last section, place after it
-            if (currentSection.endBar < totalBars) {
-              startBar = currentSection.endBar + 1;
-              endBar = Math.min(totalBars, startBar + 3);
-              break;
-            }
-          } else {
-            // Check for gap between sections
-            if (currentSection.endBar + 1 < nextSection.startBar) {
-              startBar = currentSection.endBar + 1;
-              endBar = Math.min(nextSection.startBar - 1, startBar + 3);
-              break;
-            }
+        if (!nextSection) {
+          // If this is the last section, place after it
+          if (currentSection.endBar < totalBars) {
+            startBar = currentSection.endBar + 1;
+            endBar = Math.min(totalBars, startBar + 3);
+            break;
+          }
+        } else {
+          // Check for gap between sections
+          if (currentSection.endBar + 1 < nextSection.startBar) {
+            startBar = currentSection.endBar + 1;
+            endBar = Math.min(nextSection.startBar - 1, startBar + 3);
+            break;
           }
         }
-
-        // If no gap found, try before the first section
-        if (sortedSections[0]?.startBar > 1) {
-          startBar = 1;
-          endBar = Math.min(sortedSections[0].startBar - 1, 4);
-        }
       }
 
-      // Prompt user for section name
-      const sectionName = prompt('Enter section name:', 'New Section');
-      if (sectionName) {
-        onAddSection(sectionName, startBar, endBar);
+      // If no gap found, try before the first section
+      if (sortedSections[0]?.startBar > 1) {
+        startBar = 1;
+        endBar = Math.min(sortedSections[0].startBar - 1, 4);
       }
     }
+
+    // Determine the appropriate name for the new section
+    let sectionName: string;
+
+    if (sections.length === 0) {
+      // If this is the first section, name it "Intro"
+      sectionName = "Intro";
+    } else {
+      // Find all single-letter section names (A, B, C, etc.)
+      const letterSections = sections.filter(s => /^[A-Z]$/.test(s.name));
+
+      if (letterSections.length > 0) {
+        // Sort sections alphabetically to find the highest letter
+        const sortedLetterSections = [...letterSections].sort((a, b) => a.name.localeCompare(b.name));
+        const lastLetter = sortedLetterSections[sortedLetterSections.length - 1].name;
+
+        // Get the next letter in the alphabet
+        const nextLetter = String.fromCharCode(lastLetter.charCodeAt(0) + 1);
+
+        // If we've gone beyond Z, start with A again
+        sectionName = (nextLetter > "Z") ? "A" : nextLetter;
+      } else {
+        // No single-letter sections exist yet, start with "A"
+        sectionName = "A";
+      }
+    }
+
+    onAddSection(sectionName, startBar, endBar);
   };
 
   const handleDeleteSection = (sectionId: string) => {
-    if (window.confirm('Are you sure you want to delete this section?')) {
-      onDeleteSection(sectionId);
-    }
+    onDeleteSection(sectionId);
   };
 
   return (

@@ -6,13 +6,15 @@ interface HeaderProps {
   onNameChange: (name: string) => void;
   onExport: () => void;
   onImport: (jsonData: string) => void;
+  onNew: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
   arrangementName,
   onNameChange,
   onExport,
-  onImport
+  onImport,
+  onNew
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(arrangementName);
@@ -87,6 +89,13 @@ const Header: React.FC<HeaderProps> = ({
         )}
       </div>
       <div className="header-actions">
+        <button
+          className="header-button new-button"
+          onClick={onNew}
+          title="Create a new arrangement"
+        >
+          New
+        </button>
         <button
           className="header-button import-button"
           onClick={handleImportClick}
