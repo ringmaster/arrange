@@ -332,9 +332,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
                 : `${barToPercent(barNum)}%`
             }}
           >
-            {barNum % 4 === 1 && (
-              <span className="bar-number">{barNum}</span>
-            )}
+            <span className="bar-number">{barNum}</span>
           </div>
         ))}
 

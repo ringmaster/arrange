@@ -13,7 +13,7 @@ const DEFAULT_INSTRUMENTS = ['bass', 'guitar', 'vox', 'keys', 'pads', 'perc', 'd
 const App: React.FC = () => {
   const [arrangementData, setArrangementData] = useState<ArrangementData>({
     name: 'New Arrangement',
-    totalBars: 24,
+    totalBars: 64,
     sections: [],
     instruments: [],
   });
@@ -188,8 +188,8 @@ const App: React.FC = () => {
       });
     });
 
-    // Always show at least 24 bars, or 4 more than the maximum used
-    const requiredBars = Math.max(24, maxUsedBar + 4);
+    // Always show at least 64 bars, or 4 more than the maximum used
+    const requiredBars = Math.max(64, maxUsedBar + 4);
 
     // Update totalBars if needed
     if (requiredBars > arrangementData.totalBars) {
@@ -200,7 +200,7 @@ const App: React.FC = () => {
   const createNewArrangement = useCallback(() => {
     setArrangementData({
       name: 'New Arrangement',
-      totalBars: 24,
+      totalBars: 64,
       sections: [],
       instruments: [],
     });
