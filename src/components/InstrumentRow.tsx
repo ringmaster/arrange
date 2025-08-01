@@ -269,7 +269,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       onMouseUp={handleMouseUp}
     >
       {/* Instrument name/label - occupies top half of the row */}
-      <div className="instrument-label" style={{ color: textColor, borderLeft: `3px solid ${instrument.color}` }}>
+      <div className="instrument-label" style={{ borderLeft: `3px solid ${instrument.color}` }}>
         {isEditingName ? (
           <input
             type="text"

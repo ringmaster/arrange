@@ -26,6 +26,7 @@
     cursor: pointer;
     border-bottom: 1px solid var(--border-color);
     box-sizing: border-box;
+    color: var(--text-color);
 }
 
 .instrument-name {
@@ -48,6 +49,7 @@
     border-bottom: 1px solid var(--primary-color);
     padding: 2px 4px;
     border-radius: 2px;
+    color: var(--primary-color);
 }
 
 .instrument-row-content {
