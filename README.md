@@ -2,7 +2,7 @@
 
 A modern Single Page Application (SPA) for visualizing and editing music track arrangements by breaking down instrument activity across bars and song sections. Built with React and TypeScript.
 
-📱 **[Try it now on GitHub Pages!](https://yourusername.github.io/score)**
+📱 **[Try it now on GitHub Pages!](https://ringmaster.github.io/arrange)**
 
 
 ## Features
@@ -47,8 +47,8 @@ A modern Single Page Application (SPA) for visualizing and editing music track a
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd score
+git clone https://github.com/ringmaster/arrange.git
+cd arrange
 ```
 
 2. Install dependencies:
@@ -184,7 +184,7 @@ interface ArrangementData {
 This project is configured to automatically deploy to GitHub Pages using GitHub Actions.
 
 - Each push to the main branch triggers a build and deploy workflow
-- The deployed version is available at: https://yourusername.github.io/score
+- The deployed version is available at: https://ringmaster.github.io/arrange
 - For detailed setup instructions, see [GitHub Pages Setup](docs/GITHUB_PAGES_SETUP.md)
 
 ### Local Development

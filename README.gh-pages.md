@@ -17,7 +17,7 @@ Music Arrangement Analyzer is a visual tool for breaking down instrument activit
 
 ## Development
 
-The source code for this application is in the `main` branch. This `gh-pages` branch is automatically updated by GitHub Actions whenever changes are pushed to the main branch.
+The source code for this application is in the `main` branch of https://github.com/ringmaster/arrange. This `gh-pages` branch is automatically updated by GitHub Actions whenever changes are pushed to the main branch.
 
 To contribute to this project:
 

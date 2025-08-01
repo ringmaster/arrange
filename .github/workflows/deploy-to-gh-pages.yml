@@ -39,11 +39,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci # Clean install of dependencies
-        working-directory: ./score
 
       - name: Build
         run: npm run build
-        working-directory: ./score
 
       # Configure GitHub Pages
       - name: Setup Pages
@@ -53,7 +51,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./score/dist # Directory containing the built application
+          path: dist # Directory containing the built application
 
       # Deploy to GitHub Pages - this publishes the artifact to your GitHub Pages site
       - name: Deploy to GitHub Pages
