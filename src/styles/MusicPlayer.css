@@ -74,6 +74,18 @@
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+.api-toggle {
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.2rem;
+    border-radius: 4px;
+}
+
+.api-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
 .time-display {
     font-size: 0.75rem;
     color: var(--text-muted);
@@ -139,6 +151,17 @@
     padding: 0.25rem;
     background-color: rgba(229, 57, 53, 0.05);
     border: 1px solid rgba(229, 57, 53, 0.2);
+    border-radius: 3px;
+    margin-top: 0.5rem;
+}
+
+.web-audio-info {
+    font-size: 0.75rem;
+    color: #3949ab;
+    text-align: center;
+    padding: 0.25rem;
+    background-color: rgba(57, 73, 171, 0.05);
+    border: 1px solid rgba(57, 73, 171, 0.2);
     border-radius: 3px;
     margin-top: 0.5rem;
 }
