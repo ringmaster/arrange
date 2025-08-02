@@ -37,12 +37,8 @@ const App: React.FC = () => {
 
   // Handle seeking to a specific bar in the audio
   const handleSeekToBar = useCallback((barIndex: number) => {
-    console.log(`App: handleSeekToBar called with barIndex ${barIndex}`);
-    console.log(`App: seekToBarFnRef.current is ${typeof seekToBarFnRef.current}`);
-
     if (typeof seekToBarFnRef.current === 'function') {
       try {
-        console.log(`App: Calling seekToBarFnRef.current with barIndex ${barIndex}`);
         seekToBarFnRef.current(barIndex);
       } catch (error) {
         console.error('Error seeking to bar:', error);
@@ -290,7 +286,6 @@ const App: React.FC = () => {
         onSeekToBar={(seekFn) => {
           if (typeof seekFn === 'function') {
             seekToBarFnRef.current = seekFn;
-            console.log('App: Registered audio seek function successfully');
           } else {
             console.warn('App: Failed to register seek function - not a function');
           }
@@ -300,25 +295,17 @@ const App: React.FC = () => {
           setDuration(totalDuration);
         }}
         onBpmDetected={(detectedBpm, detectedBeatInfo) => {
-          console.log('App: BPM detected:', detectedBpm, 'with beat info:', detectedBeatInfo);
-          console.log('App: Beat positions count:', detectedBeatInfo?.beatPositions?.length || 0);
-          console.log('App: Bar positions count:', detectedBeatInfo?.barPositions?.length || 0);
-
           // Ensure we're not getting duplicate updates too quickly
           const now = Date.now();
           if (now - bpmUpdateTimeRef.current > 500 || bpm === null) {
-            console.log('App: Updating BPM state with new value:', detectedBpm);
             setBpm(detectedBpm);
             setBeatInfo(detectedBeatInfo);
             bpmUpdateTimeRef.current = now;
-          } else {
-            console.log('App: Ignoring rapid BPM update, too soon after previous update');
           }
         }}
         onSeekToTime={(seekFn) => {
           if (typeof seekFn === 'function') {
             seekToTimeFnRef.current = seekFn;
-            console.log('Registered audio time seek function');
           }
         }}
       />

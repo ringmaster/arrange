@@ -50,8 +50,7 @@ const Footer: React.FC<FooterProps> = ({
       if (e.dataTransfer && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
         if (file.type.startsWith('audio/')) {
-          console.log('Audio file dropped:', file.name, file.type);
-          console.log('Footer: Preparing to process audio file for BPM detection');
+          console.log('Audio file dropped:', file.name);
 
           // Create an audio element to test if the browser can play this format
           const audio = new Audio();
@@ -74,7 +73,6 @@ const Footer: React.FC<FooterProps> = ({
               lastModified: file.lastModified
             });
 
-            console.log('Footer: Setting new audio file for BPM detection after reset:', newFile.name);
             setAudioFile(newFile);
           }, 100);
         } else {
@@ -139,19 +137,17 @@ const Footer: React.FC<FooterProps> = ({
         <MusicPlayer
           audioFile={audioFile}
           onAudioFileChange={(file) => {
-            console.log('Audio file changed in MusicPlayer:', file?.name);
             // Reset the audio file if there's an error
             if (audioFile && !file) {
               console.log('Resetting audio file due to error');
             }
 
-            // First clear the audio file to trigger a complete reset
+            // First set to null to ensure clean state
             setAudioFile(null);
 
-            // Only set the new file after ensuring complete reset
+            // Use setTimeout to ensure state reset before setting new file
             if (file) {
               setTimeout(() => {
-                console.log('Footer: Setting new audio file after complete reset:', file.name);
                 setAudioFile(file);
               }, 200); // Longer timeout for more reliable reset
             }
@@ -173,13 +169,8 @@ const Footer: React.FC<FooterProps> = ({
               }
             } : undefined}
           onBpmDetected={(detectedBpm, beatInfo) => {
-            console.log('Footer: BPM detected callback received:', detectedBpm);
-            console.log('Footer: Beat info received:', JSON.stringify(beatInfo));
             if (onBpmDetected) {
-              console.log('Footer: Forwarding BPM data to App component');
               onBpmDetected(detectedBpm, beatInfo);
-            } else {
-              console.warn('Footer: No onBpmDetected handler available');
             }
           }}
         />

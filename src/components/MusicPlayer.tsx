@@ -54,7 +54,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
   // Initialize and clean up Web Audio API
   const initWebAudio = useCallback(async (file: File) => {
-    console.log('initWebAudio called with file:', file.name);
     try {
       // Clean up any existing audio context
       if (audioContextRef.current) {
@@ -71,14 +70,12 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
       // Read the file and decode audio data
       const arrayBuffer = await file.arrayBuffer();
-      console.log('File loaded into ArrayBuffer with size:', arrayBuffer.byteLength);
 
       // Decode the audio data and store it in the ref
       const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
       audioBufferRef.current = audioBuffer;
 
-      console.log('Web Audio API initialized with buffer length:', audioBuffer.length);
-      console.log('Audio buffer ready for BPM analysis - buffer reference set:', !!audioBufferRef.current);
+      console.log('Web Audio API initialized');
       setDuration(audioBuffer.duration);
 
       // Return true to indicate successful initialization
@@ -149,15 +146,13 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
           // Directly trigger BPM analysis as soon as buffer is ready
           if (audioBufferRef.current) {
-            console.log('Directly triggering BPM analysis after buffer initialization');
             analyzeFullBuffer(audioBufferRef.current)
               .then((tempoData) => {
-                console.log('Direct BPM Analysis complete:', tempoData);
                 if (tempoData && Array.isArray(tempoData) && tempoData.length > 0) {
                   const topTempo = tempoData[0];
                   if (topTempo && typeof topTempo.tempo === 'number' && !isNaN(topTempo.tempo)) {
                     const detectedBpm = Math.round(topTempo.tempo);
-                    console.log('BPM detection succeeded:', detectedBpm, 'with confidence:', topTempo.confidence);
+                    console.log('BPM detected:', detectedBpm);
                     setBpm(detectedBpm);
 
                     // Notify parent about detected BPM
@@ -176,7 +171,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
                 }
               })
               .catch(error => {
-                console.error('Direct BPM analysis error:', error);
+                console.error('BPM analysis error:', error);
               })
               .finally(() => {
                 setIsBpmAnalyzing(false);
@@ -199,7 +194,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   // Web Audio API time update function
   const updateWebAudioTime = useCallback(() => {
     if (!audioContextRef.current || !audioBufferRef.current) {
-      console.log('updateWebAudioTime: No audio context or buffer available');
       return;
     }
 
@@ -318,12 +312,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     // Convert from 1-based (UI) to 0-based (array) index
     const zeroBasedIndex = barIndex - 1;
 
-    console.log(`Debug - seekToBar called with barIndex: ${barIndex}, converted to zero-based: ${zeroBasedIndex}`);
-    console.log(`Debug - beatInfo available: ${!!beatInfo}, barPositions available: ${!!beatInfo?.barPositions}`);
-    if (beatInfo && beatInfo.barPositions) {
-      console.log(`Debug - barPositions length: ${beatInfo.barPositions.length}, first few positions:`,
-        beatInfo.barPositions.slice(0, 5));
-    }
+
 
     // If we don't have beat info yet, estimate time based on duration and totalBars
     if (!beatInfo || !beatInfo.barPositions || beatInfo.barPositions.length === 0) {
@@ -331,7 +320,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         // Estimate bar position based on audio duration
         const barDuration = audioBufferRef.current.duration / 64; // Default to 64 bars if unknown
         const estimatedTime = (zeroBasedIndex) * barDuration;
-        console.log(`No beat info available. Estimating time for bar ${barIndex}: ${estimatedTime}s`);
+
 
         pausedTimeRef.current = estimatedTime;
         setCurrentTime(estimatedTime);
@@ -343,7 +332,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         return;
       }
 
-      console.log(`Cannot seek to bar ${barIndex}: no beat info or audio available`);
+
       return;
     }
 
@@ -360,7 +349,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           beatInfo.barPositions[beatInfo.barPositions.length - 1] +
           (zeroBasedIndex - (beatInfo.barPositions.length - 1)) * lastBarDuration;
 
-        console.log(`Bar ${barIndex} is beyond detected bars. Extrapolated time: ${extrapolatedTime}s`);
+
 
         pausedTimeRef.current = extrapolatedTime;
         setCurrentTime(extrapolatedTime);
@@ -376,7 +365,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     try {
       // Normal case - we have beat info and the bar index is within range
       if (zeroBasedIndex < 0 || zeroBasedIndex >= beatInfo.barPositions.length) {
-        console.log(`Bar index ${zeroBasedIndex} out of range (0-${beatInfo.barPositions.length - 1})`);
+
         return;
       }
 
@@ -394,7 +383,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         setTimeout(() => playAudio(), 10); // Small delay to ensure state update
       }
 
-      console.log(`Seeking to bar ${barIndex} (index ${zeroBasedIndex}) at time ${barTime}s`);
+
     } catch (error) {
       console.error('Error seeking to bar:', error);
     }
@@ -431,11 +420,8 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       try {
         // Always register the seekToBar function, even without beat info
         onSeekToBar(seekToBar);
-        console.log('Registered seek function from music player');
 
-        if (beatInfo) {
-          console.log(`Beat info available when registering seek function. Bars: ${beatInfo.barPositions.length}`);
-        } else {
+        if (!beatInfo) {
           console.log('Note: Registered seek function but beat info not available yet - will estimate positions');
         }
       } catch (error) {
@@ -449,7 +435,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     if (typeof onSeekToTime === 'function' && audioBufferRef.current) {
       try {
         onSeekToTime(seekToTime);
-        console.log('Registered time seek function from music player');
       } catch (error) {
         console.error('Error registering time seek function:', error);
       }
@@ -485,8 +470,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         barPositions.push(firstBeatOffset + i * secondsPerBeat);
       }
 
-      console.log(`Calculated ${beatPositions.length} beats and ${barPositions.length} bars for BPM ${detectedBpm}`);
-
       // Make sure we have at least one position
       if (beatPositions.length > 0 && barPositions.length > 0) {
         const newBeatInfo: BeatInfo = {
@@ -494,15 +477,12 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           barPositions,
           beatsPerBar
         };
-        console.log(`Debug - calculateBeatPositions success: ${barPositions.length} bars detected`);
-        console.log(`Debug - First 5 bar positions:`, barPositions.slice(0, 5));
-        console.log(`Debug - Last 5 bar positions:`, barPositions.slice(-5));
+        console.log(`Beat positions calculated: ${barPositions.length} bars detected`);
         setBeatInfo(newBeatInfo);
         setIsBpmAnalyzing(false);
 
         // Notify parent about BPM and beat info detection
         if (typeof onBpmDetected === 'function') {
-          console.log('Sending beat info to parent:', newBeatInfo);
           onBpmDetected(detectedBpm, newBeatInfo);
         }
       } else {
@@ -518,30 +498,23 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   // Analyze BPM when audio file is loaded
   useEffect(() => {
     const analyzeBPM = async () => {
-      console.log('analyzeBPM called - checking audio context and buffer');
       if (!audioContextRef.current || !audioBufferRef.current) {
-        console.log('analyzeBPM: Audio context or buffer not available');
         return;
       }
 
       try {
         setIsBpmAnalyzing(true);
 
-        // Start BPM detection
-        console.log('Starting BPM analysis...');
-
         // We'll analyze the buffer without playing the audio
         analyzeFullBuffer(audioBufferRef.current)
           .then((tempoData) => {
             // tempoData is an array of tempo candidates with confidence
-            console.log('BPM Analysis complete:', tempoData);
             if (tempoData && Array.isArray(tempoData) && tempoData.length > 0) {
               // Get the top tempo candidate
               const topTempo = tempoData[0];
               if (topTempo && typeof topTempo.tempo === 'number' && !isNaN(topTempo.tempo)) {
                 const detectedBpm = Math.round(topTempo.tempo);
                 setBpm(detectedBpm);
-                console.log('Top tempo:', topTempo.tempo, 'with confidence:', topTempo.confidence);
 
                 // Always notify parent about detected BPM
                 if (typeof onBpmDetected === 'function') {
@@ -550,7 +523,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
                     barPositions: [],
                     beatsPerBar: timeSignature.beats
                   };
-                  console.log('Sending initial BPM info to parent:', detectedBpm);
                   onBpmDetected(detectedBpm, initialBeatInfo);
                 }
 
@@ -575,21 +547,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       }
     };
 
-    // Removed direct BPM analysis here to avoid race conditions
-    // Will use the dedicated secondary effect below instead
-    if (audioFile && audioBufferRef.current) {
-      console.log('Audio file and buffer available in primary effect, deferring to secondary effect for analysis');
-      console.log('AudioBuffer details:', {
-        length: audioBufferRef.current.length,
-        duration: audioBufferRef.current.duration,
-        sampleRate: audioBufferRef.current.sampleRate
-      });
-    } else {
-      console.log('BPM analysis skipped - audioFile:', !!audioFile, 'audioBuffer:', !!audioBufferRef.current);
-      if (audioFile && !audioBufferRef.current) {
-        console.warn('Audio file exists but buffer is not ready yet. This might indicate an async issue.');
-      }
-    }
+    // Will use the dedicated secondary effect for analysis
   }, [audioFile]);
 
   // Dedicated effect to handle BPM analysis as a backup in case direct analysis fails
@@ -601,11 +559,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
     // Backup BPM analysis - only runs if the direct approach didn't work
     const backupAnalysisTimeout = setTimeout(() => {
-      console.log('BACKUP: Running BPM analysis because primary detection did not succeed');
-      console.log('BACKUP: Using audioBuffer with length:', audioBufferRef.current?.length);
-
       if (!audioBufferRef.current) {
-        console.log('BACKUP: No audio buffer available');
         return;
       }
 
@@ -613,13 +567,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
       analyzeFullBuffer(audioBufferRef.current)
         .then((tempoData) => {
-          console.log('BACKUP: BPM Analysis complete:', tempoData);
-
           if (tempoData && Array.isArray(tempoData) && tempoData.length > 0) {
             const topTempo = tempoData[0];
             if (topTempo && typeof topTempo.tempo === 'number' && !isNaN(topTempo.tempo)) {
               const detectedBpm = Math.round(topTempo.tempo);
-              console.log('BACKUP: BPM detection succeeded:', detectedBpm);
+              console.log('Backup BPM detected:', detectedBpm);
               setBpm(detectedBpm);
 
               if (typeof onBpmDetected === 'function') {
@@ -628,7 +580,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
                   barPositions: [],
                   beatsPerBar: timeSignature.beats
                 };
-                console.log('BACKUP: Sending BPM info to parent:', detectedBpm);
                 onBpmDetected(detectedBpm, initialBeatInfo);
               }
 
@@ -637,7 +588,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           }
         })
         .catch(error => {
-          console.error('BACKUP: BPM analysis error:', error);
+          console.error('Backup BPM analysis error:', error);
         })
         .finally(() => {
           setIsBpmAnalyzing(false);
@@ -674,8 +625,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           lastModified: file.lastModified
         });
 
-        console.log('Dropped audio file:', newFile.name, newFile.type);
-        console.log('handleDrop: Processing new audio file for BPM analysis:', newFile.name);
+        console.log('Dropped audio file:', newFile.name);
 
         // Reset state for new audio file
         setBpm(null);
@@ -683,7 +633,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         setIsBpmAnalyzing(false);
         // Force clear the audio buffer to ensure clean state
         if (audioBufferRef.current) {
-          console.log('Explicitly clearing audio buffer before loading new file');
           audioBufferRef.current = null;
         }
 
@@ -750,7 +699,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           lastModified: file.lastModified
         });
 
-        console.log('Selected audio file:', newFile.name, newFile.type);
+        console.log('Selected audio file:', newFile.name);
 
         // Reset state for new audio file
         setBpm(null);
@@ -758,7 +707,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         setIsBpmAnalyzing(false);
         // Force clear the audio buffer to ensure clean state
         if (audioBufferRef.current) {
-          console.log('Explicitly clearing audio buffer before loading new file');
           audioBufferRef.current = null;
         }
 
