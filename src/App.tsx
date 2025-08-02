@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 
+
 const DEFAULT_INSTRUMENTS = ['bass', 'guitar', 'vox', 'keys', 'pads', 'perc', 'drums'];
 
 const App: React.FC = () => {
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   // Track BPM and beat info for the section bar
   const [bpm, setBpm] = useState<number | null>(null);
   const [beatInfo, setBeatInfo] = useState<{ beatPositions: number[], barPositions: number[], beatsPerBar: number } | null>(null);
+  const bpmUpdateTimeRef = useRef<number>(0);
 
   const updateTotalBars = useCallback((totalBars: number) => {
     setArrangementData(prev => ({ ...prev, totalBars }));
@@ -298,9 +300,20 @@ const App: React.FC = () => {
           setDuration(totalDuration);
         }}
         onBpmDetected={(detectedBpm, detectedBeatInfo) => {
-          console.log('BPM detected:', detectedBpm, 'with beat info:', detectedBeatInfo);
-          setBpm(detectedBpm);
-          setBeatInfo(detectedBeatInfo);
+          console.log('App: BPM detected:', detectedBpm, 'with beat info:', detectedBeatInfo);
+          console.log('App: Beat positions count:', detectedBeatInfo?.beatPositions?.length || 0);
+          console.log('App: Bar positions count:', detectedBeatInfo?.barPositions?.length || 0);
+
+          // Ensure we're not getting duplicate updates too quickly
+          const now = Date.now();
+          if (now - bpmUpdateTimeRef.current > 500 || bpm === null) {
+            console.log('App: Updating BPM state with new value:', detectedBpm);
+            setBpm(detectedBpm);
+            setBeatInfo(detectedBeatInfo);
+            bpmUpdateTimeRef.current = now;
+          } else {
+            console.log('App: Ignoring rapid BPM update, too soon after previous update');
+          }
         }}
         onSeekToTime={(seekFn) => {
           if (typeof seekFn === 'function') {

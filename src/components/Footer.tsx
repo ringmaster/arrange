@@ -51,6 +51,7 @@ const Footer: React.FC<FooterProps> = ({
         const file = e.dataTransfer.files[0];
         if (file.type.startsWith('audio/')) {
           console.log('Audio file dropped:', file.name, file.type);
+          console.log('Footer: Preparing to process audio file for BPM detection');
 
           // Create an audio element to test if the browser can play this format
           const audio = new Audio();
@@ -62,13 +63,20 @@ const Footer: React.FC<FooterProps> = ({
             return;
           }
 
-          // Ensure we have a clean reference to the file
-          const newFile = new File([file], file.name, {
-            type: file.type,
-            lastModified: file.lastModified
-          });
+          // Important: First set audioFile to null to trigger complete cleanup
+          setAudioFile(null);
 
-          setAudioFile(newFile);
+          // Use a slightly longer timeout to ensure state is fully cleared
+          setTimeout(() => {
+            // Create a new file object to ensure we have a clean reference
+            const newFile = new File([file], file.name, {
+              type: file.type,
+              lastModified: file.lastModified
+            });
+
+            console.log('Footer: Setting new audio file for BPM detection after reset:', newFile.name);
+            setAudioFile(newFile);
+          }, 100);
         } else {
           console.warn('Dropped file is not an audio file:', file.type);
           alert('Please drop an audio file (MP3, WAV, etc.)');
@@ -136,7 +144,17 @@ const Footer: React.FC<FooterProps> = ({
             if (audioFile && !file) {
               console.log('Resetting audio file due to error');
             }
-            setAudioFile(file);
+
+            // First clear the audio file to trigger a complete reset
+            setAudioFile(null);
+
+            // Only set the new file after ensuring complete reset
+            if (file) {
+              setTimeout(() => {
+                console.log('Footer: Setting new audio file after complete reset:', file.name);
+                setAudioFile(file);
+              }, 200); // Longer timeout for more reliable reset
+            }
           }}
           onSeekToBar={onSeekToBar ?
             (seekFn) => {
@@ -154,7 +172,16 @@ const Footer: React.FC<FooterProps> = ({
                 onSeekToTime(seekFn);
               }
             } : undefined}
-          onBpmDetected={onBpmDetected}
+          onBpmDetected={(detectedBpm, beatInfo) => {
+            console.log('Footer: BPM detected callback received:', detectedBpm);
+            console.log('Footer: Beat info received:', JSON.stringify(beatInfo));
+            if (onBpmDetected) {
+              console.log('Footer: Forwarding BPM data to App component');
+              onBpmDetected(detectedBpm, beatInfo);
+            } else {
+              console.warn('Footer: No onBpmDetected handler available');
+            }
+          }}
         />
 
         <div className="app-info">

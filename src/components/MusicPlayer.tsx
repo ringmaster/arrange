@@ -54,6 +54,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
   // Initialize and clean up Web Audio API
   const initWebAudio = useCallback(async (file: File) => {
+    console.log('initWebAudio called with file:', file.name);
     try {
       // Clean up any existing audio context
       if (audioContextRef.current) {
@@ -70,16 +71,22 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
       // Read the file and decode audio data
       const arrayBuffer = await file.arrayBuffer();
+      console.log('File loaded into ArrayBuffer with size:', arrayBuffer.byteLength);
+
+      // Decode the audio data and store it in the ref
       const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
       audioBufferRef.current = audioBuffer;
 
       console.log('Web Audio API initialized with buffer length:', audioBuffer.length);
+      console.log('Audio buffer ready for BPM analysis - buffer reference set:', !!audioBufferRef.current);
       setDuration(audioBuffer.duration);
 
+      // Return true to indicate successful initialization
       return true;
     } catch (error) {
       console.error('Web Audio API initialization error:', error);
       setAudioError('Failed to initialize Web Audio API.');
+      audioBufferRef.current = null;
       return false;
     }
   }, []);
@@ -108,6 +115,8 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       setCurrentTime(0);
       setDuration(0);
       setAudioError(null);
+      setBpm(null);
+      setBeatInfo(null);
 
       // Clean up Web Audio if it was being used
       if (audioContextRef.current) {
@@ -122,12 +131,61 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     // Reset error state when loading new file
     setAudioError(null);
 
+    // Reset BPM state for new file
+    setBpm(null);
+    setBeatInfo(null);
+
     // Reset playback position
     setCurrentTime(0);
     setIsPlaying(false);
 
     // Initialize Web Audio API
-    initWebAudio(audioFile);
+    console.log('Starting Web Audio initialization for:', audioFile.name);
+    initWebAudio(audioFile)
+      .then(success => {
+        if (success) {
+          console.log('Web Audio initialized successfully, audioBufferRef is set:', !!audioBufferRef.current);
+          console.log('Buffer is now ready for BPM analysis');
+
+          // Directly trigger BPM analysis as soon as buffer is ready
+          if (audioBufferRef.current) {
+            console.log('Directly triggering BPM analysis after buffer initialization');
+            analyzeFullBuffer(audioBufferRef.current)
+              .then((tempoData) => {
+                console.log('Direct BPM Analysis complete:', tempoData);
+                if (tempoData && Array.isArray(tempoData) && tempoData.length > 0) {
+                  const topTempo = tempoData[0];
+                  if (topTempo && typeof topTempo.tempo === 'number' && !isNaN(topTempo.tempo)) {
+                    const detectedBpm = Math.round(topTempo.tempo);
+                    console.log('BPM detection succeeded:', detectedBpm, 'with confidence:', topTempo.confidence);
+                    setBpm(detectedBpm);
+
+                    // Notify parent about detected BPM
+                    if (typeof onBpmDetected === 'function') {
+                      const initialBeatInfo = {
+                        beatPositions: [],
+                        barPositions: [],
+                        beatsPerBar: timeSignature.beats
+                      };
+                      onBpmDetected(detectedBpm, initialBeatInfo);
+                    }
+
+                    // Calculate beat positions
+                    calculateBeatPositions(detectedBpm);
+                  }
+                }
+              })
+              .catch(error => {
+                console.error('Direct BPM analysis error:', error);
+              })
+              .finally(() => {
+                setIsBpmAnalyzing(false);
+              });
+          }
+        } else {
+          console.error('Web Audio initialization failed');
+        }
+      });
 
     // Clean up when component unmounts or file changes
     return () => {
@@ -140,7 +198,10 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
   // Web Audio API time update function
   const updateWebAudioTime = useCallback(() => {
-    if (!audioContextRef.current || !isPlaying || !audioBufferRef.current) return;
+    if (!audioContextRef.current || !audioBufferRef.current) {
+      console.log('updateWebAudioTime: No audio context or buffer available');
+      return;
+    }
 
     const currentAudioTime = audioContextRef.current.currentTime - startTimeRef.current + pausedTimeRef.current;
 
@@ -457,7 +518,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   // Analyze BPM when audio file is loaded
   useEffect(() => {
     const analyzeBPM = async () => {
-      if (!audioContextRef.current || !audioBufferRef.current) return;
+      console.log('analyzeBPM called - checking audio context and buffer');
+      if (!audioContextRef.current || !audioBufferRef.current) {
+        console.log('analyzeBPM: Audio context or buffer not available');
+        return;
+      }
 
       try {
         setIsBpmAnalyzing(true);
@@ -510,10 +575,77 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       }
     };
 
+    // Removed direct BPM analysis here to avoid race conditions
+    // Will use the dedicated secondary effect below instead
     if (audioFile && audioBufferRef.current) {
-      analyzeBPM();
+      console.log('Audio file and buffer available in primary effect, deferring to secondary effect for analysis');
+      console.log('AudioBuffer details:', {
+        length: audioBufferRef.current.length,
+        duration: audioBufferRef.current.duration,
+        sampleRate: audioBufferRef.current.sampleRate
+      });
+    } else {
+      console.log('BPM analysis skipped - audioFile:', !!audioFile, 'audioBuffer:', !!audioBufferRef.current);
+      if (audioFile && !audioBufferRef.current) {
+        console.warn('Audio file exists but buffer is not ready yet. This might indicate an async issue.');
+      }
     }
-  }, [audioFile, calculateBeatPositions]);
+  }, [audioFile]);
+
+  // Dedicated effect to handle BPM analysis as a backup in case direct analysis fails
+  useEffect(() => {
+    // Only run this if BPM is still null after a delay
+    if (!audioFile || !audioBufferRef.current || isBpmAnalyzing || bpm !== null) {
+      return;
+    }
+
+    // Backup BPM analysis - only runs if the direct approach didn't work
+    const backupAnalysisTimeout = setTimeout(() => {
+      console.log('BACKUP: Running BPM analysis because primary detection did not succeed');
+      console.log('BACKUP: Using audioBuffer with length:', audioBufferRef.current?.length);
+
+      if (!audioBufferRef.current) {
+        console.log('BACKUP: No audio buffer available');
+        return;
+      }
+
+      setIsBpmAnalyzing(true);
+
+      analyzeFullBuffer(audioBufferRef.current)
+        .then((tempoData) => {
+          console.log('BACKUP: BPM Analysis complete:', tempoData);
+
+          if (tempoData && Array.isArray(tempoData) && tempoData.length > 0) {
+            const topTempo = tempoData[0];
+            if (topTempo && typeof topTempo.tempo === 'number' && !isNaN(topTempo.tempo)) {
+              const detectedBpm = Math.round(topTempo.tempo);
+              console.log('BACKUP: BPM detection succeeded:', detectedBpm);
+              setBpm(detectedBpm);
+
+              if (typeof onBpmDetected === 'function') {
+                const initialBeatInfo: BeatInfo = {
+                  beatPositions: [],
+                  barPositions: [],
+                  beatsPerBar: timeSignature.beats
+                };
+                console.log('BACKUP: Sending BPM info to parent:', detectedBpm);
+                onBpmDetected(detectedBpm, initialBeatInfo);
+              }
+
+              calculateBeatPositions(detectedBpm);
+            }
+          }
+        })
+        .catch(error => {
+          console.error('BACKUP: BPM analysis error:', error);
+        })
+        .finally(() => {
+          setIsBpmAnalyzing(false);
+        });
+    }, 2000); // Long timeout to ensure we don't interfere with direct analysis
+
+    return () => clearTimeout(backupAnalysisTimeout);
+  }, [audioFile, audioBufferRef.current, bpm, isBpmAnalyzing, calculateBeatPositions, onBpmDetected, timeSignature]);
 
   // Handle drag and drop directly on player
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -543,6 +675,19 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         });
 
         console.log('Dropped audio file:', newFile.name, newFile.type);
+        console.log('handleDrop: Processing new audio file for BPM analysis:', newFile.name);
+
+        // Reset state for new audio file
+        setBpm(null);
+        setBeatInfo(null);
+        setIsBpmAnalyzing(false);
+        // Force clear the audio buffer to ensure clean state
+        if (audioBufferRef.current) {
+          console.log('Explicitly clearing audio buffer before loading new file');
+          audioBufferRef.current = null;
+        }
+
+        // Update the audio file
         onAudioFileChange(newFile);
       } else {
         setAudioError('Dropped file is not an audio file');
@@ -606,6 +751,17 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         });
 
         console.log('Selected audio file:', newFile.name, newFile.type);
+
+        // Reset state for new audio file
+        setBpm(null);
+        setBeatInfo(null);
+        setIsBpmAnalyzing(false);
+        // Force clear the audio buffer to ensure clean state
+        if (audioBufferRef.current) {
+          console.log('Explicitly clearing audio buffer before loading new file');
+          audioBufferRef.current = null;
+        }
+
         onAudioFileChange(newFile);
       } else {
         setAudioError('Selected file is not an audio file');
