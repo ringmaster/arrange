@@ -44,6 +44,7 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     initialStart: number;
     initialEnd: number;
   } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const [isCreatingActivity, setIsCreatingActivity] = useState(false);
   const [creationStartBar, setCreationStartBar] = useState<number | null>(null);
@@ -398,6 +399,13 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
     onDeleteActivity(activityId);
   };
 
+  // Effect to handle focusing the input when editing starts
+  useEffect(() => {
+    if (isEditingName && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditingName]);
+
   return (
     <div
       className="instrument-row"
@@ -416,19 +424,15 @@ const InstrumentRow: React.FC<InstrumentRowProps> = ({
       <div className="instrument-label" style={{ borderLeft: `3px solid ${instrument.color}` }}>
         {isEditingName ? (
           <input
+            ref={inputRef}
             type="text"
             value={tempName}
             onChange={(e) => setTempName(e.target.value)}
             onBlur={handleNameBlur}
             onKeyDown={handleKeyDown}
-            autoFocus
             className="instrument-name-input"
             style={{ color: 'var(--primary-color)', background: 'transparent' }}
-            ref={(input) => {
-              if (input) {
-                input.select();
-              }
-            }}
+
           />
         ) : (
           <div className="instrument-name" onClick={handleNameClick} title="Click to edit instrument name">

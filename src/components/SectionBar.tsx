@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Section } from '../types';
 import '../styles/SectionBar.css';
 
@@ -19,6 +19,7 @@ const SectionBar: React.FC<SectionBarProps> = ({
 }) => {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [tempSectionName, setTempSectionName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const [draggingSection, setDraggingSection] = useState<{
     id: string;
     edge: 'start' | 'end' | 'move' | null;
@@ -281,6 +282,13 @@ const SectionBar: React.FC<SectionBarProps> = ({
     onDeleteSection(sectionId);
   };
 
+  // Effect to handle focusing the input when editing starts
+  useEffect(() => {
+    if (editingSectionId && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingSectionId]);
+
   return (
     <div
       className="section-bar"
@@ -365,17 +373,17 @@ const SectionBar: React.FC<SectionBarProps> = ({
             >
               {editingSectionId === section.id ? (
                 <input
+                  ref={inputRef}
                   type="text"
                   value={tempSectionName}
                   onChange={e => setTempSectionName(e.target.value)}
                   onBlur={handleSectionNameBlur}
                   onKeyDown={handleKeyDown}
-                  autoFocus
                   className="section-name-input"
                   onClick={(e) => e.stopPropagation()}
                   ref={(input) => {
                     if (input) {
-                      input.select();
+                      input.focus();
                     }
                   }}
                 />
