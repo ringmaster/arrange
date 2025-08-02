@@ -8,6 +8,8 @@ import type { ArrangementData, Section } from './types';
 import { generateUniqueColor } from './utils/colorUtils';
 import { v4 as uuidv4 } from 'uuid';
 
+
+
 const DEFAULT_INSTRUMENTS = ['bass', 'guitar', 'vox', 'keys', 'pads', 'perc', 'drums'];
 
 const App: React.FC = () => {
@@ -18,20 +20,25 @@ const App: React.FC = () => {
     instruments: [],
   });
 
+
+
+  const updateTotalBars = useCallback((totalBars: number) => {
+    setArrangementData(prev => ({ ...prev, totalBars }));
+  }, []);
+
   // Auto-save to localStorage
   useEffect(() => {
     const savedData = localStorage.getItem('arrangementData');
     if (savedData) {
       try {
         setArrangementData(JSON.parse(savedData));
-        // After loading saved data, calculate if we need to show more bars
-        setTimeout(() => calculateRequiredBars(), 0);
       } catch (e) {
         console.error('Failed to parse saved data', e);
       }
     }
-  }, []);
+  }, []); // No dependencies needed for initial load
 
+  // Effect to update localStorage when data changes
   useEffect(() => {
     localStorage.setItem('arrangementData', JSON.stringify(arrangementData));
   }, [arrangementData]);
@@ -83,8 +90,7 @@ const App: React.FC = () => {
       ),
     }));
 
-    // Check if we need to expand the total bars
-    calculateRequiredBars();
+    // BPM-based bar calculation will be implemented in the future
   }, []);
 
   const updateActivity = useCallback((
@@ -114,10 +120,7 @@ const App: React.FC = () => {
       };
     });
 
-    // Only check if we need to expand bars when actually changing bar positions, not just variations
-    if (variation === undefined) {
-      calculateRequiredBars();
-    }
+    // BPM-based bar calculation will be implemented in the future
   }, []);
 
   const deleteActivity = useCallback((instrumentId: string, activityId: string) => {
@@ -143,8 +146,7 @@ const App: React.FC = () => {
       ].sort((a, b) => a.startBar - b.startBar),
     }));
 
-    // Check if we need to expand the total bars
-    calculateRequiredBars();
+    // BPM-based bar calculation will be implemented in the future
   }, []);
 
   const updateSection = useCallback((
@@ -160,8 +162,7 @@ const App: React.FC = () => {
       ).sort((a, b) => a.startBar - b.startBar),
     }));
 
-    // Check if we need to expand the total bars
-    calculateRequiredBars();
+    // BPM-based bar calculation will be implemented in the future
   }, []);
 
   const deleteSection = useCallback((sectionId: string) => {
@@ -174,35 +175,6 @@ const App: React.FC = () => {
   const updateArrangementName = useCallback((name: string) => {
     setArrangementData(prev => ({ ...prev, name }));
   }, []);
-
-  const updateTotalBars = useCallback((totalBars: number) => {
-    setArrangementData(prev => ({ ...prev, totalBars }));
-  }, []);
-
-  // Calculate the required number of bars based on current content
-  const calculateRequiredBars = () => {
-    let maxUsedBar = 0;
-
-    // Check maximum bar used in sections
-    arrangementData.sections.forEach(section => {
-      maxUsedBar = Math.max(maxUsedBar, section.endBar);
-    });
-
-    // Check maximum bar used in activities
-    arrangementData.instruments.forEach(instrument => {
-      instrument.activities.forEach(activity => {
-        maxUsedBar = Math.max(maxUsedBar, activity.endBar);
-      });
-    });
-
-    // Always show at least 64 bars, or 4 more than the maximum used
-    const requiredBars = Math.max(64, maxUsedBar + 4);
-
-    // Update totalBars if needed, but only ever increase, never decrease
-    if (requiredBars > arrangementData.totalBars) {
-      updateTotalBars(requiredBars);
-    }
-  };
 
   const createNewArrangement = useCallback(() => {
     setArrangementData({
@@ -240,8 +212,7 @@ const App: React.FC = () => {
 
       setArrangementData(parsedData);
 
-      // After import, calculate if we need to show more bars
-      setTimeout(() => calculateRequiredBars(), 0);
+      // BPM-based bar calculation will be implemented in the future
     } catch (e) {
       console.error('Failed to import arrangement data', e);
       alert('The file does not contain valid arrangement data.');

@@ -9,6 +9,12 @@
     padding: 0.75rem 2rem;
     box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
     z-index: 10;
+    transition: background-color 0.2s ease;
+}
+
+/* Style for when audio file is being dragged over */
+.footer.dragging {
+    background-color: rgba(0, 0, 0, 0.03);
 }
 
 .footer-content {
@@ -47,23 +53,39 @@
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
-.shortcuts-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--text-muted);
-    font-size: 0.8rem;
+/* Music player container in footer */
+.footer .music-player {
+    flex: 1;
+    margin: 0 1rem;
+    max-height: 60px;
 }
 
-.shortcut-key {
-    display: inline-block;
-    padding: 0.1rem 0.4rem;
-    background-color: var(--border-color);
-    border-radius: 3px;
-    font-family: monospace;
-    font-size: 0.75rem;
-    color: var(--text-color);
-    margin: 0 0.25rem;
+/* Ensure the player fits properly in the footer */
+.footer .music-player-placeholder {
+    height: 40px;
+    min-height: 40px;
+}
+
+/* Adjust layout of controls in footer context */
+.footer .music-player-controls {
+    padding: 0;
+}
+
+/* Make time display smaller in footer context */
+.footer .time-display {
+    font-size: 0.7rem;
+}
+
+/* Customize file input in footer context */
+.footer .file-input-label {
+    font-size: 0.7rem;
+}
+
+.footer .music-player-placeholder {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .app-info {
@@ -84,7 +106,7 @@
         align-items: flex-start;
     }
 
-    .shortcuts-info,
+    .music-player,
     .app-info {
         display: none;
     }
@@ -94,5 +116,9 @@
 @media (prefers-color-scheme: dark) {
     .shortcut-key {
         background-color: var(--grid-line-major);
+    }
+
+    .footer.dragging {
+        background-color: rgba(255, 255, 255, 0.05);
     }
 }
