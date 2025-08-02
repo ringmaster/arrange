@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import Header from './components/Header';
 import SectionBar from './components/SectionBar';
@@ -19,11 +19,24 @@ const App: React.FC = () => {
     sections: [],
     instruments: [],
   });
-
-
+  // Use a ref instead of state to avoid re-renders
+  const seekToBarFnRef = useRef<((barIndex: number) => void) | null>(null);
 
   const updateTotalBars = useCallback((totalBars: number) => {
     setArrangementData(prev => ({ ...prev, totalBars }));
+  }, []);
+
+  // Handle seeking to a specific bar in the audio
+  const handleSeekToBar = useCallback((barIndex: number) => {
+    if (typeof seekToBarFnRef.current === 'function') {
+      try {
+        seekToBarFnRef.current(barIndex);
+      } catch (error) {
+        console.error('Error seeking to bar:', error);
+      }
+    } else {
+      console.log('No audio player reference available for seeking');
+    }
   }, []);
 
   // Auto-save to localStorage
@@ -246,11 +259,18 @@ const App: React.FC = () => {
         onAddActivity={addActivity}
         onUpdateActivity={updateActivity}
         onDeleteActivity={deleteActivity}
+        onSeekToBar={handleSeekToBar}
       />
 
       <Footer
         totalBars={arrangementData.totalBars}
         onUpdateTotalBars={updateTotalBars}
+        onSeekToBar={(seekFn) => {
+          if (typeof seekFn === 'function') {
+            seekToBarFnRef.current = seekFn;
+            console.log('Registered audio seek function');
+          }
+        }}
       />
     </div>
   );

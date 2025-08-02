@@ -5,9 +5,10 @@ import MusicPlayer from './MusicPlayer';
 interface FooterProps {
   totalBars: number;
   onUpdateTotalBars: (totalBars: number) => void;
+  onSeekToBar?: (seekFn: (barIndex: number) => void) => void;
 }
 
-const Footer: React.FC<FooterProps> = ({ totalBars, onUpdateTotalBars }) => {
+const Footer: React.FC<FooterProps> = ({ totalBars, onUpdateTotalBars, onSeekToBar }) => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const footerRef = useRef<HTMLElement>(null);
@@ -127,6 +128,12 @@ const Footer: React.FC<FooterProps> = ({ totalBars, onUpdateTotalBars }) => {
             }
             setAudioFile(file);
           }}
+          onSeekToBar={onSeekToBar ?
+            (seekFn) => {
+              if (typeof seekFn === 'function') {
+                onSeekToBar(seekFn);
+              }
+            } : undefined}
         />
 
         <div className="app-info">

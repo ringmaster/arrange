@@ -12,6 +12,7 @@ interface ArrangementGridProps {
   onAddActivity: (instrumentId: string, startBar: number, endBar: number) => void;
   onUpdateActivity: (instrumentId: string, activityId: string, startBar: number, endBar: number, variation?: number) => void;
   onDeleteActivity: (instrumentId: string, activityId: string) => void;
+  onSeekToBar?: (barIndex: number) => void;
 }
 
 const ArrangementGrid: React.FC<ArrangementGridProps> = ({
@@ -22,7 +23,8 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
   onUpdateInstrumentName,
   onAddActivity,
   onUpdateActivity,
-  onDeleteActivity
+  onDeleteActivity,
+  onSeekToBar
 }) => {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -61,11 +63,42 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
     onAddInstrument();
   };
 
+  // Handle click on the grid to seek to a specific bar when shift key is pressed
+  const handleGridClick = (e: React.MouseEvent) => {
+    // Only handle when shift key is pressed and onSeekToBar is provided
+    if (!e.shiftKey || !onSeekToBar) return;
+
+    const gridRect = gridRef.current?.getBoundingClientRect();
+    if (!gridRect) return;
+
+    // Calculate which bar was clicked based on position
+    const relativeX = e.clientX - gridRect.left;
+    const gridWidth = gridRect.width;
+
+    let barIndex;
+    if (totalBars > 64) {
+      // Fixed width mode (20px per bar)
+      barIndex = Math.floor(relativeX / 20);
+    } else {
+      // Percentage-based mode
+      const clickPercent = relativeX / gridWidth;
+      barIndex = Math.floor(clickPercent * totalBars);
+    }
+
+    // Ensure the bar index is within valid range
+    if (barIndex >= 0 && barIndex < totalBars) {
+      console.log(`Shift+Click: Seeking to bar ${barIndex + 1}`);
+      onSeekToBar(barIndex);
+    }
+  };
+
   return (
     <div
       className="arrangement-grid-container"
       ref={gridRef}
       data-bars-count={totalBars > 64 ? "65" : totalBars.toString()}
+      onClick={handleGridClick}
+      title={onSeekToBar ? "Shift+Click to seek audio to this position" : ""}
     >
       {/* Timeline with bar numbers */}
       <div className="timeline-ruler">

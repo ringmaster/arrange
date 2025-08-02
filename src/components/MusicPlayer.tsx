@@ -2,9 +2,23 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import '../styles/MusicPlayer.css';
 import { analyzeFullBuffer } from 'realtime-bpm-analyzer';
 
+// Define a time signature interface for music theory calculations
+interface TimeSignature {
+  beats: number;      // Number of beats per measure (numerator)
+  beatUnit: number;   // Note value that gets one beat (denominator)
+}
+
+// Define a beat info interface to store calculated beat positions
+interface BeatInfo {
+  beatPositions: number[];  // Time positions of all beats in seconds
+  barPositions: number[];   // Time positions of all bars (first beat of each bar) in seconds
+  beatsPerBar: number;      // Number of beats in each bar based on time signature
+}
+
 interface MusicPlayerProps {
   audioFile: File | null;
   onAudioFileChange: (file: File | null) => void;
+  onSeekToBar?: (seekFn: (barIndex: number) => void) => void;
 }
 
 // Web Audio API context type
@@ -12,7 +26,8 @@ type AudioContextType = AudioContext | null;
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({
   audioFile,
-  onAudioFileChange
+  onAudioFileChange,
+  onSeekToBar
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -21,6 +36,10 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const [audioError, setAudioError] = useState<string | null>(null);
   const [bpm, setBpm] = useState<number | null>(null);
   const [isBpmAnalyzing, setIsBpmAnalyzing] = useState(false);
+  const [timeSignature, setTimeSignature] = useState<TimeSignature>({ beats: 4, beatUnit: 4 }); // Default to 4/4
+  const [beatInfo, setBeatInfo] = useState<BeatInfo | null>(null);
+  const [currentBeat, setCurrentBeat] = useState<number | null>(null);
+  const [currentBar, setCurrentBar] = useState<number | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
 
   // Web Audio API refs
@@ -121,11 +140,24 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
     if (!isDragging) {
       setCurrentTime(currentAudioTime);
+
+      // Update current beat and bar information if we have beat info
+      if (beatInfo) {
+        // Find the current beat
+        const currentBeatIndex = beatInfo.beatPositions.findIndex(time => time > currentAudioTime) - 1;
+        if (currentBeatIndex >= 0) {
+          setCurrentBeat(currentBeatIndex);
+
+          // Calculate current bar based on beats per bar
+          const currentBarIndex = Math.floor(currentBeatIndex / beatInfo.beatsPerBar);
+          setCurrentBar(currentBarIndex);
+        }
+      }
     }
 
     // Continue updating time
     rafIdRef.current = requestAnimationFrame(updateWebAudioTime);
-  }, [isPlaying, isDragging]);
+  }, [isPlaying, isDragging, beatInfo]);
 
   // Start Web Audio time updates when playing
   useEffect(() => {
@@ -141,84 +173,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     };
   }, [isPlaying, updateWebAudioTime]);
 
-  // Analyze BPM when audio file is loaded
-  useEffect(() => {
-    const analyzeBPM = async () => {
-      if (!audioContextRef.current || !audioBufferRef.current) return;
-
-      try {
-        setIsBpmAnalyzing(true);
-
-        // Start BPM detection
-        console.log('Starting BPM analysis...');
-
-        // We'll analyze the buffer without playing the audio
-        analyzeFullBuffer(audioBufferRef.current)
-          .then((tempoData) => {
-            // tempoData is an array of tempo candidates with confidence
-            console.log('BPM Analysis complete:', tempoData);
-            if (tempoData && tempoData.length > 0) {
-              // Get the top tempo candidate
-              const topTempo = tempoData[0];
-              setBpm(Math.round(topTempo.tempo));
-              console.log('Top tempo:', topTempo.tempo, 'with confidence:', topTempo.confidence);
-            } else {
-              console.log('No tempo detected');
-            }
-            setIsBpmAnalyzing(false);
-          })
-          .catch((error) => {
-            console.error('BPM Analysis error:', error);
-            setIsBpmAnalyzing(false);
-          });
-      } catch (error) {
-        console.error('Failed to analyze BPM:', error);
-        setIsBpmAnalyzing(false);
-      }
-    };
-
-    if (audioFile && audioBufferRef.current) {
-      analyzeBPM();
-    }
-  }, [audioBufferRef.current]);
-
-  // Handle drag and drop directly on player
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('audio/')) {
-        // Create a new reference to the file to avoid potential caching issues
-        const newFile = new File([file], file.name, {
-          type: file.type,
-          lastModified: file.lastModified
-        });
-
-        console.log('Dropped audio file:', newFile.name, newFile.type);
-        onAudioFileChange(newFile);
-      } else {
-        setAudioError('Dropped file is not an audio file');
-        console.warn('Dropped file is not an audio file:', file.type);
-      }
-    }
-  };
-
-  // Play audio with Web Audio API
+  // Define play and pause functions first to avoid circular dependencies
   const playAudio = useCallback(() => {
     if (!audioContextRef.current || !audioBufferRef.current) return;
 
@@ -295,21 +250,199 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     console.log('Web Audio paused at:', pausedTimeRef.current);
   }, [isPlaying]);
 
+  // Define seekToBar function as a callback
+  const seekToBar = useCallback((barIndex: number) => {
+    if (!beatInfo || !beatInfo.barPositions || barIndex < 0 || barIndex >= beatInfo.barPositions.length) {
+      console.log(`Cannot seek to bar ${barIndex}: invalid bar index or no beat info available`);
+      return;
+    }
+
+    try {
+      const barTime = beatInfo.barPositions[barIndex];
+      if (typeof barTime !== 'number' || isNaN(barTime)) {
+        console.error(`Invalid bar time for bar ${barIndex}`);
+        return;
+      }
+
+      pausedTimeRef.current = barTime;
+      setCurrentTime(barTime);
+
+      if (isPlaying) {
+        pauseAudio();
+        setTimeout(() => playAudio(), 10); // Small delay to ensure state update
+      }
+
+      console.log(`Seeking to bar ${barIndex} at time ${barTime}s`);
+    } catch (error) {
+      console.error('Error seeking to bar:', error);
+    }
+  }, [beatInfo, isPlaying, pauseAudio, playAudio]);
+
+  // Register seekToBar function with parent component
+  useEffect(() => {
+    if (typeof onSeekToBar === 'function' && beatInfo) {
+      try {
+        // Only register the function when we have beat info available
+        onSeekToBar(seekToBar);
+        console.log('Registered seek function from music player');
+      } catch (error) {
+        console.error('Error registering seek function:', error);
+      }
+    }
+  }, [onSeekToBar, beatInfo, seekToBar]);
+
+  // Analyze BPM when audio file is loaded
+  useEffect(() => {
+    const analyzeBPM = async () => {
+      if (!audioContextRef.current || !audioBufferRef.current) return;
+
+      try {
+        setIsBpmAnalyzing(true);
+
+        // Start BPM detection
+        console.log('Starting BPM analysis...');
+
+        // We'll analyze the buffer without playing the audio
+        analyzeFullBuffer(audioBufferRef.current)
+          .then((tempoData) => {
+            // tempoData is an array of tempo candidates with confidence
+            console.log('BPM Analysis complete:', tempoData);
+            if (tempoData && Array.isArray(tempoData) && tempoData.length > 0) {
+              // Get the top tempo candidate
+              const topTempo = tempoData[0];
+              if (topTempo && typeof topTempo.tempo === 'number' && !isNaN(topTempo.tempo)) {
+                const detectedBpm = Math.round(topTempo.tempo);
+                setBpm(detectedBpm);
+                console.log('Top tempo:', topTempo.tempo, 'with confidence:', topTempo.confidence);
+
+                // Calculate beat and bar positions once we have the BPM
+                calculateBeatPositions(detectedBpm);
+              } else {
+                console.warn('Invalid tempo data received');
+                setIsBpmAnalyzing(false);
+              }
+            } else {
+              console.log('No tempo detected');
+              setIsBpmAnalyzing(false);
+            }
+          })
+          .catch((error) => {
+            console.error('BPM Analysis error:', error);
+            setIsBpmAnalyzing(false);
+          });
+      } catch (error) {
+        console.error('Failed to analyze BPM:', error);
+        setIsBpmAnalyzing(false);
+      }
+    };
+
+    if (audioFile && audioBufferRef.current) {
+      analyzeBPM();
+    }
+  }, [audioBufferRef.current]);
+
+  // Calculate beat and bar positions based on BPM and time signature
+  const calculateBeatPositions = useCallback((detectedBpm: number) => {
+    if (!audioBufferRef.current || !detectedBpm || isNaN(detectedBpm) || detectedBpm <= 0) {
+      console.warn('Invalid BPM or audio buffer for beat calculation:', detectedBpm);
+      return;
+    }
+
+    try {
+      const beatsPerSecond = detectedBpm / 60;
+      const secondsPerBeat = 60 / detectedBpm;
+      const beatsPerBar = timeSignature.beats || 4; // Default to 4 if undefined
+      const audioDuration = audioBufferRef.current.duration || 0;
+      const totalBeats = Math.max(1, Math.ceil(audioDuration * beatsPerSecond));
+
+      // Assume the first beat starts at 0 seconds (we could add offset detection later)
+      const firstBeatOffset = 0;
+
+      // Calculate all beat positions
+      const beatPositions: number[] = [];
+      for (let i = 0; i < totalBeats; i++) {
+        beatPositions.push(firstBeatOffset + i * secondsPerBeat);
+      }
+
+      // Calculate bar positions (every nth beat, where n is the number of beats per bar)
+      const barPositions: number[] = [];
+      for (let i = 0; i < totalBeats; i += beatsPerBar) {
+        barPositions.push(firstBeatOffset + i * secondsPerBeat);
+      }
+
+      console.log(`Calculated ${beatPositions.length} beats and ${barPositions.length} bars for BPM ${detectedBpm}`);
+
+      // Make sure we have at least one position
+      if (beatPositions.length > 0 && barPositions.length > 0) {
+        setBeatInfo({
+          beatPositions,
+          barPositions,
+          beatsPerBar
+        });
+        setIsBpmAnalyzing(false);
+      } else {
+        console.warn('No beat or bar positions calculated');
+        setIsBpmAnalyzing(false);
+      }
+    } catch (error) {
+      console.error('Error calculating beat positions:', error);
+      setIsBpmAnalyzing(false);
+    }
+  }, [timeSignature]);
+
+  // Handle drag and drop directly on player
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith('audio/')) {
+        // Create a new reference to the file to avoid potential caching issues
+        const newFile = new File([file], file.name, {
+          type: file.type,
+          lastModified: file.lastModified
+        });
+
+        console.log('Dropped audio file:', newFile.name, newFile.type);
+        onAudioFileChange(newFile);
+      } else {
+        setAudioError('Dropped file is not an audio file');
+        console.warn('Dropped file is not an audio file:', file.type);
+      }
+    }
+  };
+
+  // Playback control functions were moved up to avoid circular dependencies
+
   // Playback control functions
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       pauseAudio();
     } else {
       playAudio();
     }
-  };
+  }, [isPlaying, pauseAudio, playAudio]);
 
-  const handleStop = () => {
+  const handleStop = useCallback(() => {
     stopWebAudio();
     pausedTimeRef.current = 0;
     setCurrentTime(0);
     console.log('Web Audio playback stopped');
-  };
+  }, [stopWebAudio]);
 
   const handleScrubStart = () => {
     setIsDragging(true);
@@ -412,7 +545,9 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
               {isBpmAnalyzing ? (
                 <span className="bpm-display analyzing">Analyzing BPM...</span>
               ) : bpm ? (
-                <span className="bpm-display">{bpm} BPM</span>
+                <span className="bpm-display" title="Tempo and current position">
+                  {bpm} BPM {currentBar !== null ? `| Bar ${currentBar + 1}` : ''}
+                </span>
               ) : null}
               <span className="time-display">{formatTime(currentTime)} / {formatTime(duration)}</span>
             </div>
@@ -442,7 +577,9 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           <div className="web-audio-info">
             {isBpmAnalyzing
               ? "Analyzing audio BPM..."
-              : "Using Web Audio API for BPM detection"}
+              : beatInfo
+                ? `${beatInfo.barPositions.length} bars detected | Shift+click on arrangement to seek to bar`
+                : "Using Web Audio API for BPM detection"}
           </div>
         </>
       )}
