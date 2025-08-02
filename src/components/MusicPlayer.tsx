@@ -18,10 +18,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const [useWebAudio, setUseWebAudio] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const audioSrcRef = useRef<string>('');
 
   // Web Audio API refs
   const audioContextRef = useRef<AudioContextType>(null);
@@ -59,8 +56,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       return true;
     } catch (error) {
       console.error('Web Audio API initialization error:', error);
-      setAudioError('Failed to initialize Web Audio API. Falling back to standard audio.');
-      setUseWebAudio(false);
+      setAudioError('Failed to initialize Web Audio API.');
       return false;
     }
   }, []);
@@ -74,12 +70,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       setDuration(0);
       setAudioError(null);
 
-      // Revoke any existing object URL
-      if (audioSrcRef.current) {
-        URL.revokeObjectURL(audioSrcRef.current);
-        audioSrcRef.current = '';
-      }
-
       // Clean up Web Audio if it was being used
       if (audioContextRef.current) {
         stopWebAudio();
@@ -90,17 +80,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       return;
     }
 
-    // Clean up previous URL if it exists
-    if (audioSrcRef.current) {
-      URL.revokeObjectURL(audioSrcRef.current);
-    }
-
-    // Create a new object URL for the audio file for HTML5 Audio
-    const objectUrl = URL.createObjectURL(audioFile);
-    audioSrcRef.current = objectUrl;
-
-    console.log('Created audio source for:', audioFile.name);
-
     // Reset error state when loading new file
     setAudioError(null);
 
@@ -108,68 +87,19 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     setCurrentTime(0);
     setIsPlaying(false);
 
-    // Initialize Web Audio API if enabled
-    if (useWebAudio) {
-      initWebAudio(audioFile);
-    }
+    // Initialize Web Audio API
+    initWebAudio(audioFile);
 
     // Clean up when component unmounts or file changes
     return () => {
-      if (audioSrcRef.current) {
-        URL.revokeObjectURL(audioSrcRef.current);
-      }
-
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }
     };
-  }, [audioFile, useWebAudio, initWebAudio]);
+  }, [audioFile, initWebAudio]);
 
-  // Update time display when audio is playing with HTML5 Audio
-  useEffect(() => {
-    if (!audioRef.current || useWebAudio) return;
-
-    // Setup event listeners for the audio element
-    const audio = audioRef.current;
-
-    const handleTimeUpdate = () => {
-      if (!isDragging) {
-        setCurrentTime(audio.currentTime);
-      }
-    };
-
-    const handleDurationChange = () => {
-      setDuration(audio.duration);
-      console.log('Audio duration:', audio.duration);
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      console.log('Audio playback ended');
-    };
-
-    const handleError = (e: ErrorEvent) => {
-      console.error('Audio playback error:', e);
-      setAudioError('Error playing audio file');
-      setIsPlaying(false);
-    };
-
-    // Add event listeners
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('durationchange', handleDurationChange);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError as unknown as EventListener);
-
-    // Clean up event listeners
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('durationchange', handleDurationChange);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError as unknown as EventListener);
-    };
-  }, [isDragging, useWebAudio]);
+  // No HTML5 audio implementation needed
 
   // Web Audio API time update function
   const updateWebAudioTime = useCallback(() => {
@@ -196,7 +126,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
   // Start Web Audio time updates when playing
   useEffect(() => {
-    if (useWebAudio && isPlaying) {
+    if (isPlaying) {
       updateWebAudioTime();
     }
 
@@ -206,7 +136,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         rafIdRef.current = null;
       }
     };
-  }, [useWebAudio, isPlaying, updateWebAudioTime]);
+  }, [isPlaying, updateWebAudioTime]);
 
   // Handle drag and drop directly on player
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -245,7 +175,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   };
 
   // Play audio with Web Audio API
-  const playWebAudio = useCallback(() => {
+  const playAudio = useCallback(() => {
     if (!audioContextRef.current || !audioBufferRef.current) return;
 
     // Resume audio context if suspended (due to browser policies)
@@ -298,7 +228,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   }, []);
 
   // Pause Web Audio playback
-  const pauseWebAudio = useCallback(() => {
+  const pauseAudio = useCallback(() => {
     if (!audioContextRef.current || !isPlaying) return;
 
     // Calculate current position
@@ -321,51 +251,20 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     console.log('Web Audio paused at:', pausedTimeRef.current);
   }, [isPlaying]);
 
-  // Playback control functions - decides which implementation to use
+  // Playback control functions
   const handlePlayPause = () => {
-    if (useWebAudio) {
-      if (isPlaying) {
-        pauseWebAudio();
-      } else {
-        playWebAudio();
-      }
+    if (isPlaying) {
+      pauseAudio();
     } else {
-      if (!audioRef.current) return;
-
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-        console.log('Audio paused at:', audioRef.current.currentTime);
-      } else {
-        // Attempt to play and handle autoplay restrictions
-        audioRef.current.play()
-          .then(() => {
-            setIsPlaying(true);
-            console.log('Audio playback started');
-          })
-          .catch(error => {
-            console.error('Play failed:', error);
-            setAudioError('Browser blocked autoplay. Please click play again.');
-          });
-      }
+      playAudio();
     }
   };
 
   const handleStop = () => {
-    if (useWebAudio) {
-      stopWebAudio();
-      pausedTimeRef.current = 0;
-      setCurrentTime(0);
-      console.log('Web Audio playback stopped');
-    } else {
-      if (!audioRef.current) return;
-
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      setCurrentTime(0);
-      console.log('Audio playback stopped');
-    }
+    stopWebAudio();
+    pausedTimeRef.current = 0;
+    setCurrentTime(0);
+    console.log('Web Audio playback stopped');
   };
 
   const handleScrubStart = () => {
@@ -375,16 +274,12 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const handleScrubEnd = () => {
     setIsDragging(false);
 
-    if (useWebAudio) {
-      // Update the paused time for Web Audio API
-      pausedTimeRef.current = currentTime;
+    // Update the paused time for Web Audio API
+    pausedTimeRef.current = currentTime;
 
-      // If currently playing, restart playback from new position
-      if (isPlaying) {
-        playWebAudio();
-      }
-    } else if (audioRef.current && !isNaN(currentTime)) {
-      audioRef.current.currentTime = currentTime;
+    // If currently playing, restart playback from new position
+    if (isPlaying) {
+      playAudio();
     }
   };
 
@@ -394,32 +289,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     console.log('Seeking to:', newTime);
   };
 
-  // Toggle between HTML5 Audio and Web Audio API
-  const toggleAudioImplementation = () => {
-    if (isPlaying) {
-      // Stop current playback before switching
-      if (useWebAudio) {
-        stopWebAudio();
-      } else if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      setIsPlaying(false);
-    }
-
-    setCurrentTime(0);
-    pausedTimeRef.current = 0;
-
-    // Toggle implementation
-    const newUseWebAudio = !useWebAudio;
-    setUseWebAudio(newUseWebAudio);
-
-    // Initialize Web Audio if switching to it and we have an audio file
-    if (newUseWebAudio && audioFile) {
-      initWebAudio(audioFile);
-    }
-
-    console.log(`Switched to ${newUseWebAudio ? 'Web Audio API' : 'HTML5 Audio'}`);
-  };
+  // No implementation toggle needed
 
   const formatTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -492,14 +362,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
               ⏹️
             </button>
 
-            <button
-              className="player-button api-toggle"
-              onClick={toggleAudioImplementation}
-              aria-label={useWebAudio ? "Switch to HTML5 Audio" : "Switch to Web Audio API"}
-              title={useWebAudio ? "Using Web Audio API" : "Using HTML5 Audio"}
-            >
-              {useWebAudio ? "🎛️" : "🎵"}
-            </button>
+            {/* Web Audio API button removed */}
 
             <div className="time-display">
               {formatTime(currentTime)} / {formatTime(duration)}
@@ -526,29 +389,10 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
             <div className="error-message">{audioError}</div>
           )}
 
-          {/* Hidden audio element for HTML5 Audio playback */}
-          {!useWebAudio && (
-            <audio
-              ref={audioRef}
-              src={audioSrcRef.current}
-              preload="auto"
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onLoadedMetadata={(e) => {
-                if (audioRef.current) {
-                  setDuration(audioRef.current.duration);
-                  console.log('Audio metadata loaded, duration:', audioRef.current.duration);
-                }
-              }}
-            />
-          )}
-
           {/* Web Audio API info message */}
-          {useWebAudio && (
-            <div className="web-audio-info">
-              Using Web Audio API
-            </div>
-          )}
+          <div className="web-audio-info">
+            Using Web Audio API for BPM detection capability
+          </div>
         </>
       )}
     </div>

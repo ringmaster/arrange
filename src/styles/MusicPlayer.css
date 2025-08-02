@@ -74,17 +74,7 @@
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-.api-toggle {
-    font-size: 0.85rem;
-    margin-left: 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 0.2rem;
-    border-radius: 4px;
-}
-
-.api-toggle:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-}
+/* No API toggle needed - using Web Audio API only */
 
 .time-display {
     font-size: 0.75rem;
@@ -164,6 +154,7 @@
     border: 1px solid rgba(57, 73, 171, 0.2);
     border-radius: 3px;
     margin-top: 0.5rem;
+    font-style: italic;
 }
 
 /* Audio debugger styling */
