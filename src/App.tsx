@@ -19,8 +19,15 @@ const App: React.FC = () => {
     sections: [],
     instruments: [],
   });
+  // Track audio player state
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   // Use a ref instead of state to avoid re-renders
   const seekToBarFnRef = useRef<((barIndex: number) => void) | null>(null);
+  const seekToTimeFnRef = useRef<((time: number) => void) | null>(null);
+  // Track BPM and beat info for the section bar
+  const [bpm, setBpm] = useState<number | null>(null);
+  const [beatInfo, setBeatInfo] = useState<{ beatPositions: number[], barPositions: number[], beatsPerBar: number } | null>(null);
 
   const updateTotalBars = useCallback((totalBars: number) => {
     setArrangementData(prev => ({ ...prev, totalBars }));
@@ -28,8 +35,12 @@ const App: React.FC = () => {
 
   // Handle seeking to a specific bar in the audio
   const handleSeekToBar = useCallback((barIndex: number) => {
+    console.log(`App: handleSeekToBar called with barIndex ${barIndex}`);
+    console.log(`App: seekToBarFnRef.current is ${typeof seekToBarFnRef.current}`);
+
     if (typeof seekToBarFnRef.current === 'function') {
       try {
+        console.log(`App: Calling seekToBarFnRef.current with barIndex ${barIndex}`);
         seekToBarFnRef.current(barIndex);
       } catch (error) {
         console.error('Error seeking to bar:', error);
@@ -248,6 +259,15 @@ const App: React.FC = () => {
         onAddSection={addSection}
         onUpdateSection={updateSection}
         onDeleteSection={deleteSection}
+        currentTime={currentTime}
+        duration={duration}
+        bpm={bpm}
+        beatInfo={beatInfo}
+        onSeek={(time) => {
+          if (typeof seekToTimeFnRef.current === 'function') {
+            seekToTimeFnRef.current(time);
+          }
+        }}
       />
 
       <ArrangementGrid
@@ -268,7 +288,24 @@ const App: React.FC = () => {
         onSeekToBar={(seekFn) => {
           if (typeof seekFn === 'function') {
             seekToBarFnRef.current = seekFn;
-            console.log('Registered audio seek function');
+            console.log('App: Registered audio seek function successfully');
+          } else {
+            console.warn('App: Failed to register seek function - not a function');
+          }
+        }}
+        onTimeUpdate={(time, totalDuration) => {
+          setCurrentTime(time);
+          setDuration(totalDuration);
+        }}
+        onBpmDetected={(detectedBpm, detectedBeatInfo) => {
+          console.log('BPM detected:', detectedBpm, 'with beat info:', detectedBeatInfo);
+          setBpm(detectedBpm);
+          setBeatInfo(detectedBeatInfo);
+        }}
+        onSeekToTime={(seekFn) => {
+          if (typeof seekFn === 'function') {
+            seekToTimeFnRef.current = seekFn;
+            console.log('Registered audio time seek function');
           }
         }}
       />

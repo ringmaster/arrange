@@ -8,6 +8,11 @@ interface SectionBarProps {
   onAddSection: (name: string, startBar: number, endBar: number) => void;
   onUpdateSection: (sectionId: string, updates: Partial<Omit<Section, 'id'>>) => void;
   onDeleteSection: (sectionId: string) => void;
+  currentTime?: number;
+  duration?: number;
+  onSeek?: (time: number) => void;
+  bpm?: number | null;
+  beatInfo?: { beatPositions: number[], barPositions: number[], beatsPerBar: number } | null;
 }
 
 const SectionBar: React.FC<SectionBarProps> = ({
@@ -15,7 +20,12 @@ const SectionBar: React.FC<SectionBarProps> = ({
   totalBars,
   onAddSection,
   onUpdateSection,
-  onDeleteSection
+  onDeleteSection,
+  currentTime = 0,
+  duration = 0,
+  onSeek,
+  bpm = null, // BPM is used for beat detection visualization
+  beatInfo = null
 }) => {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [tempSectionName, setTempSectionName] = useState('');
@@ -31,8 +41,10 @@ const SectionBar: React.FC<SectionBarProps> = ({
   const [isCreatingSection, setIsCreatingSection] = useState(false);
   const [creationStartBar, setCreationStartBar] = useState<number | null>(null);
   const [currentMousePos, setCurrentMousePos] = useState<number>(0);
+  const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
   const sectionBarRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
 
   // Function to convert bar number to position percentage with exact alignment
   const barToPercent = (bar: number) => {
@@ -87,12 +99,14 @@ const SectionBar: React.FC<SectionBarProps> = ({
 
   // Function to handle mouse down on the timeline to start section creation
   const handleTimelineMouseDown = (e: React.MouseEvent) => {
-    if (isDragging) {
+    if (isDragging || isDraggingPlayhead) {
       return;
     }
 
-    // Don't handle clicks on existing sections
-    if ((e.target as HTMLElement).closest('.section-container')) {
+    // Don't handle clicks on existing sections or playhead
+    if ((e.target as HTMLElement).closest('.section-container') ||
+      (e.target as HTMLElement).closest('.playhead') ||
+      (e.target as HTMLElement).closest('.playhead-triangle')) {
       return;
     }
 
@@ -114,12 +128,14 @@ const SectionBar: React.FC<SectionBarProps> = ({
 
   // Function to handle clicks directly on the timeline
   const handleTimelineClick = (e: React.MouseEvent) => {
-    if (isDragging || isCreatingSection) {
+    if (isDragging || isCreatingSection || isDraggingPlayhead) {
       return;
     }
 
-    // Don't handle clicks on existing sections
-    if ((e.target as HTMLElement).closest('.section-container')) {
+    // Don't handle clicks on existing sections or playhead
+    if ((e.target as HTMLElement).closest('.section-container') ||
+      (e.target as HTMLElement).closest('.playhead') ||
+      (e.target as HTMLElement).closest('.playhead-triangle')) {
       return;
     }
 
@@ -227,6 +243,17 @@ const SectionBar: React.FC<SectionBarProps> = ({
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
+    if (isDraggingPlayhead) {
+      setIsDraggingPlayhead(false);
+      e.stopPropagation(); // Prevent section creation when releasing the playhead
+      return;
+    }
+
+    // Ignore clicks on the playhead
+    if ((e.target as HTMLElement).closest('.playhead')) {
+      return;
+    }
+
     if (isCreatingSection && creationStartBar !== null) {
       const endBar = positionToBar(e.clientX);
 
@@ -289,6 +316,112 @@ const SectionBar: React.FC<SectionBarProps> = ({
     }
   }, [editingSectionId]);
 
+  // Calculate playhead position based on current time and beats/bars
+  const getPlayheadPosition = () => {
+    if (!duration) return 0;
+
+    // If we have bar positions from beat detection, use those for more accurate positioning
+    if (beatInfo && beatInfo.barPositions && beatInfo.barPositions.length > 0) {
+      // Find the current bar based on time
+      const currentBarIndex = beatInfo.barPositions.findIndex(time => time > currentTime) - 1;
+
+      // If we're before the first bar, interpolate position
+      if (currentBarIndex < 0) {
+        const firstBarTime = beatInfo.barPositions[0];
+        const percent = (currentTime / firstBarTime) * (barToPercent(2) - barToPercent(1));
+        return `${percent}%`;
+      }
+
+      // If we're past the last bar, extrapolate position
+      if (currentBarIndex >= beatInfo.barPositions.length - 1) {
+        const barPercent = barToPercent(totalBars);
+        return `${barPercent}%`;
+      }
+
+      // For positions between bars, interpolate
+      const currentBarTime = beatInfo.barPositions[currentBarIndex];
+      const nextBarTime = beatInfo.barPositions[currentBarIndex + 1];
+      const barDuration = nextBarTime - currentBarTime;
+      const progressInBar = (currentTime - currentBarTime) / barDuration;
+
+      // Convert to visual bar position (1-based indexing)
+      const visualBarStart = currentBarIndex + 1;
+      const visualBarEnd = visualBarStart + 1;
+
+      const startPercent = barToPercent(visualBarStart);
+      const endPercent = barToPercent(visualBarEnd);
+      const percent = startPercent + progressInBar * (endPercent - startPercent);
+
+      return `${percent}%`;
+    }
+
+    // Simple time-based positioning as fallback
+    // Calculate percent based on the song's total bars
+    const barWidth = 100 / totalBars;
+    const estimatedBar = Math.floor((currentTime / duration) * totalBars) + 1;
+    const estimatedPosition = barWidth * (estimatedBar - 1);
+
+    // Calculate progress within the current bar
+    const barDuration = duration / totalBars;
+    const positionInBar = (currentTime % barDuration) / barDuration;
+
+    // Calculate the final percent
+    let percent = estimatedPosition + (positionInBar * barWidth);
+
+    // Make sure we don't exceed the total width
+    percent = Math.min(percent, 100);
+
+    return `${percent}%`;
+  };
+
+  // Handle playhead mouse events
+  const handlePlayheadMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault(); // Prevent any other events from firing
+    setIsDraggingPlayhead(true);
+  };
+
+  const handlePlayheadMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingPlayhead || !timelineRef.current || !onSeek) return;
+    e.stopPropagation(); // Prevent other events when dragging playhead
+
+    const rect = timelineRef.current.getBoundingClientRect();
+    const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+
+    // Get the bar position based on mouse position
+    const barPosition = positionToBar(e.clientX);
+
+    // Ensure barPosition is within valid range
+    const validBarPosition = Math.max(1, Math.min(barPosition, totalBars));
+
+    if (beatInfo && beatInfo.barPositions && beatInfo.barPositions.length > 0) {
+      // If we have beat info, find the corresponding time for this bar
+      const barIndex = barPosition - 1; // Convert from 1-based to 0-based
+
+      // If the bar index is within our detected bars, use the exact time
+      if (barIndex >= 0 && barIndex < beatInfo.barPositions.length) {
+        onSeek(beatInfo.barPositions[barIndex]);
+        return;
+      }
+
+      // For positions beyond our detected bars, extrapolate time
+      if (barIndex >= beatInfo.barPositions.length && beatInfo.barPositions.length >= 2) {
+        const lastTwoBarsTiming = beatInfo.barPositions[beatInfo.barPositions.length - 1] -
+          beatInfo.barPositions[beatInfo.barPositions.length - 2];
+        const extrapolatedTime = beatInfo.barPositions[beatInfo.barPositions.length - 1] +
+          (barIndex - (beatInfo.barPositions.length - 1)) * lastTwoBarsTiming;
+        onSeek(extrapolatedTime);
+        return;
+      }
+    }
+
+    // Fallback to bar-based time calculation if we don't have beat info
+    // Calculate time based on the clicked bar position
+    const barBasedTime = ((validBarPosition - 1) / totalBars) * duration;
+    console.log(`Seeking to time ${barBasedTime}s (Bar position: ${validBarPosition})`);
+    onSeek(barBasedTime);
+  };
+
   return (
     <div
       className="section-bar"
@@ -298,9 +431,18 @@ const SectionBar: React.FC<SectionBarProps> = ({
           handleMouseMove(e);
         } else if (isCreatingSection) {
           setCurrentMousePos(e.clientX);
+        } else if (isDraggingPlayhead) {
+          handlePlayheadMouseMove(e);
         }
       }}
       onMouseUp={handleMouseUp}
+      onClick={(e) => {
+        // Prevent section creation from playhead clicks bubbling up
+        if ((e.target as HTMLElement).closest('.playhead') ||
+          (e.target as HTMLElement).closest('.playhead-triangle')) {
+          e.stopPropagation();
+        }
+      }}
     >
       <div
         className="section-timeline"
@@ -381,11 +523,6 @@ const SectionBar: React.FC<SectionBarProps> = ({
                   onKeyDown={handleKeyDown}
                   className="section-name-input"
                   onClick={(e) => e.stopPropagation()}
-                  ref={(input) => {
-                    if (input) {
-                      input.focus();
-                    }
-                  }}
                 />
               ) : (
                 <div
@@ -416,6 +553,21 @@ const SectionBar: React.FC<SectionBarProps> = ({
             ></div>
           </div>
         ))}
+
+        {/* Playhead */}
+        <div
+          className="playhead"
+          ref={playheadRef}
+          style={{
+            left: getPlayheadPosition(),
+            display: duration > 0 ? 'block' : 'none', // Only show when audio is loaded
+            pointerEvents: 'all', // Ensure it's clickable
+            zIndex: 30 // Ensure it's above other elements
+          }}
+          onMouseDown={handlePlayheadMouseDown}
+        >
+          <div className="playhead-triangle"></div>
+        </div>
       </div>
       <div className="section-instructions">
         Click on empty timeline to add a new section • Click section name to edit • Drag edges to resize • Drag middle to move

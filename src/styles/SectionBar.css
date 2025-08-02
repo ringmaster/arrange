@@ -7,7 +7,8 @@
     background-color: var(--surface-color);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 1rem;
-    overflow-y: hidden;
+    overflow-y: visible;
+    /* Allow the playhead triangle to be visible below */
     overflow-x: auto;
 }
 
@@ -169,6 +170,69 @@
 .section-container.dragging {
     opacity: 0.8;
     box-shadow: var(--shadow-md);
+}
+
+/* Playhead styles */
+.playhead {
+    position: absolute;
+    top: 0;
+    bottom: -16px;
+    /* Extend below the section bar to fit the triangle */
+    width: 16px;
+    height: 76px;
+    /* Increased height to accommodate triangle below */
+    margin-left: -8px;
+    /* Center the playhead on the position */
+    cursor: ew-resize;
+    z-index: 20;
+    pointer-events: all;
+    transition: transform 0.1s ease-out;
+}
+
+.playhead-triangle {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 16px solid #ffd700;
+    /* Yellow color */
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.4));
+    z-index: 31;
+    /* Ensure triangle is above all other elements */
+}
+
+.playhead::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 16px;
+    /* Space for the triangle */
+    left: 50%;
+    width: 3px;
+    background-color: #ffd700;
+    /* Yellow color */
+    transform: translateX(-50%);
+    box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.3);
+    height: 60px;
+    /* Match the section bar height */
+}
+
+.playhead:hover {
+    transform: scale(1.1);
+}
+
+.playhead:hover .playhead-triangle {
+    border-bottom-color: #ffcc00;
+    /* Slightly darker yellow on hover */
+}
+
+.playhead:active .playhead-triangle {
+    border-bottom-color: #ff9900;
+    /* Orange when being dragged */
 }
 
 /* Responsive adjustments */

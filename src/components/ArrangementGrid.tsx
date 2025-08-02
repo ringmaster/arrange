@@ -75,20 +75,33 @@ const ArrangementGrid: React.FC<ArrangementGridProps> = ({
     const relativeX = e.clientX - gridRect.left;
     const gridWidth = gridRect.width;
 
+    console.log(`Grid click at X: ${relativeX} of total width: ${gridWidth}`);
+
     let barIndex;
     if (totalBars > 64) {
       // Fixed width mode (20px per bar)
       barIndex = Math.floor(relativeX / 20);
+      console.log(`Using fixed width mode: ${relativeX} / 20 = bar ${barIndex}`);
     } else {
       // Percentage-based mode
       const clickPercent = relativeX / gridWidth;
       barIndex = Math.floor(clickPercent * totalBars);
+      console.log(`Using percentage mode: ${clickPercent} * ${totalBars} = bar ${barIndex}`);
     }
 
-    // Ensure the bar index is within valid range
+    // Ensure the bar index is within valid range and convert to 1-based index for seeking
     if (barIndex >= 0 && barIndex < totalBars) {
-      console.log(`Shift+Click: Seeking to bar ${barIndex + 1}`);
-      onSeekToBar(barIndex);
+      const oneBasedBarIndex = barIndex + 1;
+      console.log(`Shift+Click: Seeking to bar ${oneBasedBarIndex} (zero-based: ${barIndex})`);
+
+      if (typeof onSeekToBar === 'function') {
+        console.log(`onSeekToBar is available, calling with bar ${oneBasedBarIndex}`);
+        onSeekToBar(oneBasedBarIndex);
+      } else {
+        console.error(`onSeekToBar is not available: ${typeof onSeekToBar}`);
+      }
+    } else {
+      console.warn(`Bar index ${barIndex} is out of range (0-${totalBars - 1})`);
     }
   };
 

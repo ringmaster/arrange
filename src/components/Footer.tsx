@@ -6,9 +6,19 @@ interface FooterProps {
   totalBars: number;
   onUpdateTotalBars: (totalBars: number) => void;
   onSeekToBar?: (seekFn: (barIndex: number) => void) => void;
+  onTimeUpdate?: (currentTime: number, duration: number) => void;
+  onSeekToTime?: (seekFn: (time: number) => void) => void;
+  onBpmDetected?: (bpm: number, beatInfo: { beatPositions: number[], barPositions: number[], beatsPerBar: number }) => void;
 }
 
-const Footer: React.FC<FooterProps> = ({ totalBars, onUpdateTotalBars, onSeekToBar }) => {
+const Footer: React.FC<FooterProps> = ({
+  totalBars,
+  onUpdateTotalBars,
+  onSeekToBar,
+  onTimeUpdate,
+  onSeekToTime,
+  onBpmDetected
+}) => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const footerRef = useRef<HTMLElement>(null);
@@ -46,7 +56,7 @@ const Footer: React.FC<FooterProps> = ({ totalBars, onUpdateTotalBars, onSeekToB
           const audio = new Audio();
           const canPlay = audio.canPlayType(file.type);
 
-          if (canPlay === '' || canPlay === 'no') {
+          if (canPlay === '') {
             console.warn('Browser cannot play this audio format:', file.type);
             alert(`Your browser cannot play this audio format: ${file.type}`);
             return;
@@ -134,6 +144,17 @@ const Footer: React.FC<FooterProps> = ({ totalBars, onUpdateTotalBars, onSeekToB
                 onSeekToBar(seekFn);
               }
             } : undefined}
+          onTimeUpdate={onTimeUpdate ?
+            (currentTime, duration) => {
+              onTimeUpdate(currentTime, duration);
+            } : undefined}
+          onSeekToTime={onSeekToTime ?
+            (seekFn) => {
+              if (typeof seekFn === 'function') {
+                onSeekToTime(seekFn);
+              }
+            } : undefined}
+          onBpmDetected={onBpmDetected}
         />
 
         <div className="app-info">
