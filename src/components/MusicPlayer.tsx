@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import '../styles/MusicPlayer.css';
+import { analyzeFullBuffer } from 'realtime-bpm-analyzer';
 
 interface MusicPlayerProps {
   audioFile: File | null;
@@ -18,6 +19,8 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [bpm, setBpm] = useState<number | null>(null);
+  const [isBpmAnalyzing, setIsBpmAnalyzing] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
 
   // Web Audio API refs
@@ -137,6 +140,47 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       }
     };
   }, [isPlaying, updateWebAudioTime]);
+
+  // Analyze BPM when audio file is loaded
+  useEffect(() => {
+    const analyzeBPM = async () => {
+      if (!audioContextRef.current || !audioBufferRef.current) return;
+
+      try {
+        setIsBpmAnalyzing(true);
+
+        // Start BPM detection
+        console.log('Starting BPM analysis...');
+
+        // We'll analyze the buffer without playing the audio
+        analyzeFullBuffer(audioBufferRef.current)
+          .then((tempoData) => {
+            // tempoData is an array of tempo candidates with confidence
+            console.log('BPM Analysis complete:', tempoData);
+            if (tempoData && tempoData.length > 0) {
+              // Get the top tempo candidate
+              const topTempo = tempoData[0];
+              setBpm(Math.round(topTempo.tempo));
+              console.log('Top tempo:', topTempo.tempo, 'with confidence:', topTempo.confidence);
+            } else {
+              console.log('No tempo detected');
+            }
+            setIsBpmAnalyzing(false);
+          })
+          .catch((error) => {
+            console.error('BPM Analysis error:', error);
+            setIsBpmAnalyzing(false);
+          });
+      } catch (error) {
+        console.error('Failed to analyze BPM:', error);
+        setIsBpmAnalyzing(false);
+      }
+    };
+
+    if (audioFile && audioBufferRef.current) {
+      analyzeBPM();
+    }
+  }, [audioBufferRef.current]);
 
   // Handle drag and drop directly on player
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -364,8 +408,13 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
             {/* Web Audio API button removed */}
 
-            <div className="time-display">
-              {formatTime(currentTime)} / {formatTime(duration)}
+            <div className="bpm-time-display">
+              {isBpmAnalyzing ? (
+                <span className="bpm-display analyzing">Analyzing BPM...</span>
+              ) : bpm ? (
+                <span className="bpm-display">{bpm} BPM</span>
+              ) : null}
+              <span className="time-display">{formatTime(currentTime)} / {formatTime(duration)}</span>
             </div>
           </div>
 
@@ -391,7 +440,9 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
           {/* Web Audio API info message */}
           <div className="web-audio-info">
-            Using Web Audio API for BPM detection capability
+            {isBpmAnalyzing
+              ? "Analyzing audio BPM..."
+              : "Using Web Audio API for BPM detection"}
           </div>
         </>
       )}

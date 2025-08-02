@@ -18,6 +18,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.7.1",
+    "realtime-bpm-analyzer": "^4.0.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
